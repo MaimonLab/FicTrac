@@ -2,7 +2,7 @@
  * ImgSource.h
  *
  *  Created on: May 25, 2013
- *      Author: rjdmoore
+ *      Author: rjdmoore@uqconnect.edu.au
  */
 
 #ifndef IMGSOURCE_H_

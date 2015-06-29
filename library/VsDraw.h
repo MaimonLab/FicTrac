@@ -40,8 +40,8 @@ public:
 	/// so that mapping onto arbitrary image projections gives the
 	/// appearance of correct 3D view sphere geometry.
 	///
-	void arc(CmPoint axis, double radius, CmPoint start, double extent, int nSeg=32, bool filled=false);
-	void line(CmPoint p0, CmPoint p1, int nSeg=32);
+	void arc(CmPoint axis, double radius, CmPoint start, double extent, int nSeg=32, bool filled=false, bool shadow=false);
+	void line(CmPoint p0, CmPoint p1, int nSeg=32, bool shadow=false);
 	void circle(CmPoint axis, double radius, int nSeg=64, bool filled=false);
 
 	///
@@ -56,8 +56,8 @@ public:
 	/// pixels per radian.  A negative radius forces the point to be drawn
 	/// in units of pixels radius rather than angle.
 	///
-	void point(CmPoint p, double radius, bool filled=true);
-	void cross(CmPoint centre, double radius);
+	void point(CmPoint p, double radius, bool filled=true, bool shadow=false);
+	void cross(CmPoint centre, double radius, bool shadow=false);
 
 	///
 	/// State that affects drawing.
@@ -76,8 +76,8 @@ public:
 
 private:
 	void _start();
-	bool _linePoint(CmPoint& prev, CmPoint& prevPix, const CmPoint& p, bool force=false);
-	bool _testLinePoint(CmPoint& prev, CmPoint& prevPix, const CmPoint& p);
+	bool _linePoint(CmPoint& prev, CmPoint& prevPix, const CmPoint& p, bool force=false, bool shadow=false);
+	bool _testLinePoint(CmPoint& prev, CmPoint& prevPix, const CmPoint& p, bool shadow=false);
 	void _end();
 
 	/// avoid infecting world with GTK-style include file nightmare!

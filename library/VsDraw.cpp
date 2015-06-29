@@ -168,7 +168,7 @@ void VsDraw::_end()
 	cr.stroke();
 }
 
-void VsDraw::point(CmPoint p, double radius, bool filled)
+void VsDraw::point(CmPoint p, double radius, bool filled, bool shadow)
 {
 	CmPoint pix;
 	if (_cam->vectorToPixel(p, pix.x, pix.y)) {
@@ -188,6 +188,18 @@ void VsDraw::point(CmPoint p, double radius, bool filled)
 			///
 			radius = 1e6;
 		}
+
+		// shadow
+		if( shadow ) {
+			cv::Scalar c = _color;
+			_color = cv::Scalar(0,0,0,255);
+			_start();
+			Cairo::Context& cr = _internal->contextRef();
+			cr.arc(pix.x+_offX+1, pix.y+_offY+1, radius, 0, 2*CM_PI);
+			_end();
+			_color = c;
+		}
+
 		Cairo::Context& cr = _internal->contextRef();
 		_start();
 		cr.arc(pix.x+_offX, pix.y+_offY, radius, 0, 2*CM_PI);
@@ -197,7 +209,7 @@ void VsDraw::point(CmPoint p, double radius, bool filled)
 	}
 }
 
-void VsDraw::cross(CmPoint centre, double radius)
+void VsDraw::cross(CmPoint centre, double radius, bool shadow)
 {
 	CmPoint pix;
 	if (_cam->vectorToPixel(centre, pix.x, pix.y)) {
@@ -219,6 +231,21 @@ void VsDraw::cross(CmPoint centre, double radius)
 		}
 		pix.x += _offX;
 		pix.y += _offY;
+
+		// shadow
+		if( shadow ) {
+			cv::Scalar c = _color;
+			_color = cv::Scalar(0,0,0,255);
+			_start();
+			Cairo::Context& cr = _internal->contextRef();
+			cr.move_to(pix.x-radius+1, pix.y-radius+1);
+			cr.line_to(pix.x+radius+1, pix.y+radius+1);
+			cr.move_to(pix.x+radius+1, pix.y-radius+1);
+			cr.line_to(pix.x-radius+1, pix.y+radius+1);
+			_end();
+			_color = c;
+		}
+
 		_start();
 		Cairo::Context& cr = _internal->contextRef();
 		cr.move_to(pix.x-radius, pix.y-radius);
@@ -233,7 +260,7 @@ void VsDraw::cross(CmPoint centre, double radius)
 /// Returns whether the path is unbroken i.e. whether it would be safe
 /// to create a closed path from final path point.
 ///
-bool VsDraw::_linePoint(CmPoint& prev, CmPoint& prevPix, const CmPoint& p, bool force)
+bool VsDraw::_linePoint(CmPoint& prev, CmPoint& prevPix, const CmPoint& p, bool force, bool shadow)
 {
 	///
 	/// NOTE: Cairo uses continuous pixel coordinates, the same as the
@@ -247,6 +274,7 @@ bool VsDraw::_linePoint(CmPoint& prev, CmPoint& prevPix, const CmPoint& p, bool 
 		///
 		CmPoint pix;
 		if (_cam->vectorToPixel(p, pix.x, pix.y)) {
+			if( shadow ) { pix.x += 1; pix.y += 1; }
 			cr.move_to(pix.x+_offX, pix.y+_offY);
 			prev = p;
 			prevPix = pix;
@@ -259,6 +287,7 @@ bool VsDraw::_linePoint(CmPoint& prev, CmPoint& prevPix, const CmPoint& p, bool 
 	} else {
 		CmPoint pix;
 		if (_cam->vectorToPixel(p, pix.x, pix.y)) {
+			if( shadow ) { pix.x += 1; pix.y += 1; }
 			if (force || (
 					fabs(prevPix.x-pix.x) < (_w/3)
 					&& fabs(prevPix.y-pix.y) < (_h/3)))
@@ -285,11 +314,12 @@ bool VsDraw::_linePoint(CmPoint& prev, CmPoint& prevPix, const CmPoint& p, bool 
 ///
 /// Copy of _linePoint() but without modifying anything.
 ///
-bool VsDraw::_testLinePoint(CmPoint& prev, CmPoint& prevPix, const CmPoint& p)
+bool VsDraw::_testLinePoint(CmPoint& prev, CmPoint& prevPix, const CmPoint& p, bool shadow)
 {
 	if (prev.len2() < 1e-9) {
 		CmPoint pix;
 		if (_cam->vectorToPixel(p, pix.x, pix.y)) {
+			if( shadow ) { pix.x += 1; pix.y += 1; }
 		} else {
 			/// Indicate next point is a new line
 			return false;
@@ -297,6 +327,7 @@ bool VsDraw::_testLinePoint(CmPoint& prev, CmPoint& prevPix, const CmPoint& p)
 	} else {
 		CmPoint pix;
 		if (_cam->vectorToPixel(p, pix.x, pix.y)) {
+			if( shadow ) { pix.x += 1; pix.y += 1; }
 			if (fabs(prevPix.x-pix.x) < (_w/3) && fabs(prevPix.y-pix.y) < (_h/3)) {
 			} else {
 				/// Indicate next point is a new line
@@ -312,12 +343,39 @@ bool VsDraw::_testLinePoint(CmPoint& prev, CmPoint& prevPix, const CmPoint& p)
 
 void VsDraw::arc(
 		CmPoint axis, double radius, CmPoint start, double extent,
-		int nSeg, bool filled)
+		int nSeg, bool filled, bool shadow)
 {
 	if (nSeg < 1)
 		nSeg = 1;
 	CmPoint first = axis.getRotatedAbout(axis^start, radius);
 	CmPoint omega = axis.getNormalised() * (extent / nSeg);
+
+	// shadow
+	if( shadow ) {
+		cv::Scalar c = _color;
+		_color = cv::Scalar(0,0,0,255);
+		_start();
+		CmPoint prev, prevPix;
+		_linePoint(prev, prevPix, first, false, true);
+		Cairo::Context& cr = _internal->contextRef();
+		bool unbroken = true;
+		for (int i=1; i<nSeg; ++i) {
+			CmPoint p = first.getRotatedAbout(i * omega);
+			if (!_linePoint(prev, prevPix, p, false, true))
+				unbroken = false;
+		}
+		CmPoint p = first.getRotatedAbout(nSeg * omega);
+		if (fabs(extent) >= (2*CM_PI - 1e-9)
+				&& unbroken && _testLinePoint(prev, prevPix, p, true))
+		{
+			cr.close_path();
+		} else {
+			_linePoint(prev, prevPix, p, true);
+		}
+		_end();
+		_color = c;
+	}
+
 	_start();
 	CmPoint prev, prevPix;
 	_linePoint(prev, prevPix, first);
@@ -358,7 +416,7 @@ void VsDraw::circle(CmPoint axis, double radius, int nSeg, bool filled)
 	arc(axis, radius, perp, 360*CM_D2R, std::max(3,nSeg), filled);
 }
 
-void VsDraw::line(CmPoint p0, CmPoint p1, int nSeg)
+void VsDraw::line(CmPoint p0, CmPoint p1, int nSeg, bool shadow)
 {
 	///
 	/// Draw in angular pieces for reasonable use of resolution.
@@ -371,5 +429,5 @@ void VsDraw::line(CmPoint p0, CmPoint p1, int nSeg)
 	///
 	CmPoint axis = p0 ^ p1;
 	double angle = p0.getAngleTo(p1);
-	arc(axis, 90*CM_D2R, p0, angle, nSeg);
+	arc(axis, 90*CM_D2R, p0, angle, nSeg, false, shadow);
 }

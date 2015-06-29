@@ -2,7 +2,7 @@
  * CVSource.cpp
  *
  *  Created on: May 25, 2013
- *      Author: rjdmoore
+ *      Author: rjdmoore@uqconnect.edu.au
  */
 
 #include "CVSource.h"

@@ -12,7 +12,7 @@ class Utils
 	public:
 		static void				SET_PROCESS_PRIORITY(int priority);
 
-		static bool				READ_FILE_TO_STRING(const std::string fn, std::string& ret);
+//		static bool				READ_FILE_TO_STRING(const std::string fn, std::string& ret);
 		static std::string		GET_TOKEN(std::string& str, std::string dlim = "\t\n, ");
 		static void				TOKENISE(const std::string& str,
 										std::deque<std::string>& tokens,

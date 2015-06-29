@@ -4,8 +4,8 @@
 
 #include <string>
 #include <sstream>
-#include <iostream>
-#include <fstream>
+//#include <iostream>
+//#include <fstream>
 #include <deque>
 #include <cmath>
 #include <stdint.h>
@@ -21,20 +21,20 @@ void Utils::SET_PROCESS_PRIORITY(int priority)
 	printf("%s: Current process priority set to %d.\n", __func__, p);
 }
 
-bool Utils::READ_FILE_TO_STRING(const std::string fn, std::string& ret)
-{
-	std::stringstream buffer;
-	std::ifstream file;
-	file.open(fn.c_str(),std::ifstream::in);
-	if( !file.is_open() ) {
-		fprintf(stderr, "%s: Error, unable to open file (%s)!\n", __func__, fn.c_str());
-		return false;
-	}
-	buffer << file.rdbuf();
-	file.close();
-	ret = buffer.str().substr(0);
-	return true;
-}
+//bool Utils::READ_FILE_TO_STRING(const std::string fn, std::string& ret)
+//{
+//	std::stringstream buffer;
+//	std::ifstream file;
+//	file.open(fn.c_str(),std::ifstream::in);
+//	if( !file.is_open() ) {
+//		fprintf(stderr, "%s: Error, unable to open file (%s)!\n", __func__, fn.c_str());
+//		return false;
+//	}
+//	buffer << file.rdbuf();
+//	file.close();
+//	ret = buffer.str().substr(0);
+//	return true;
+//}
 
 std::string Utils::GET_TOKEN(std::string& str, std::string dlim)
 {

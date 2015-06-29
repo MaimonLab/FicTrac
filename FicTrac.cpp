@@ -2,8 +2,10 @@
  * FicTrac.cpp
  *
  *  Created on: 26/05/2011
- *      Author: Richard Moore (rjdmoore@gmail.com)
+ *      Author: Richard Moore (rjdmoore@uqconnect.edu.au)
  */
+
+#define BUILD_STRING "2015.03.26"
 
 #include "CameraModel.h"
 #include "CameraRemap.h"
@@ -40,18 +42,8 @@ SHARED_PTR(CameraRemap);
 #include <netinet/in.h>
 #include <signal.h>
 
-//added by Pablo for MCC USB 3101 6/30/14
-#include <fcntl.h>
-#include <ctype.h>
-#include <asm/types.h>
-
-#include "pmd.h"
-#include "usb-3100.h"
-//these two files and its headers/pointers were added to Fictrac's folder
-//---------------------------------
-
 #define EXTRA_DEBUG_WINDOWS 0
-#define LOG_TIMING 1
+#define LOG_TIMING 0
 
 #ifdef PGR_CAMERA
 	#include "PGRSource.h"
@@ -67,6 +59,20 @@ using std::ifstream;
 using std::stringstream;
 using std::endl;
 using cv::Mat;
+using cv::Scalar;
+using cv::Size;
+using cv::Rect;
+using cv::Point;
+using cv::Point3f;
+using cv::waitKey;
+using cv::namedWindow;
+using cv::destroyWindow;
+using cv::setWindowProperty;
+using cv::startWindowThread;
+using cv::WINDOW_NORMAL;
+using cv::BORDER_CONSTANT;
+using cv::BORDER_REPLICATE;
+using cv::imread;
 
 bool SPHERE_INIT = false;
 
@@ -291,14 +297,14 @@ public:
 			_mask = mask.clone();
 		} else {
 			_mask.create(_input_h, _input_w, CV_8UC1);
-			_mask.setTo(cv::Scalar::all(255));
+			_mask.setTo(Scalar::all(255));
 		}
 
 		_sphere_hist = boost::shared_array<int>(new int[_w*_h*256]);
 		memset(_sphere_hist.get(), 0, _w*_h*256*sizeof(int));
 
 		_sphere_max.create(_h, _w, CV_32SC1);
-		_sphere_max.setTo(cv::Scalar::all(0));
+		_sphere_max.setTo(Scalar::all(0));
 
 		if( !sphere_template.empty() ) {
 			_sphere = sphere_template.clone();
@@ -313,11 +319,11 @@ public:
 			}
 		} else {
 			_sphere.create(_h, _w, CV_8UC1);
-			_sphere.setTo(cv::Scalar::all(128));
+			_sphere.setTo(Scalar::all(128));
 		}
 
 		_orient.create(_h, _w, CV_8UC1);
-		_orient.setTo(cv::Scalar::all(255));
+		_orient.setTo(Scalar::all(255));
 
 		_p1s_lut = boost::shared_array<double>(new double[_input_w*_input_h*3]);
 		memset(_p1s_lut.get(), 0, _input_w*_input_h*3*sizeof(double));
@@ -346,8 +352,8 @@ public:
 
 	void clearSphere()
 	{
-		_sphere.setTo(cv::Scalar::all(128));
-		_sphere_max.setTo(cv::Scalar::all(0));
+		_sphere.setTo(Scalar::all(128));
+		_sphere_max.setTo(Scalar::all(0));
 		memset(_sphere_hist.get(), 0, _w*_h*256*sizeof(int));
 	}
 
@@ -359,12 +365,12 @@ public:
 //		Maths::MUL_MAT(_roi_rot_mat, _R, _tmpR1);		// transpose to ROI coordinate frame
 
 		if( _do_display ) {
-			_orient.setTo(cv::Scalar::all(128));
+			_orient.setTo(Scalar::all(128));
 		}
 
 		static Mat diff(_h, _w, CV_8UC1);
 		#if EXTRA_DEBUG_WINDOWS
-			diff.setTo(cv::Scalar::all(128));
+			diff.setTo(Scalar::all(128));
 		#endif
 
 		int cnt = 0, good = 0;
@@ -410,8 +416,8 @@ public:
 		printf("match overlap: %.1f%%\n", 100*r);
 
 		#if EXTRA_DEBUG_WINDOWS
-			cv::namedWindow("FicTrac-diff", 0);
-			cv::imshow("FicTrac-diff", diff);
+			namedWindow("FicTrac-diff", 0);
+			imshow("FicTrac-diff", diff);
 			cvResizeWindow("FicTrac-diff", 600, 300);
 		#endif
 
@@ -427,7 +433,7 @@ public:
 //		printf("%d: testing %6.3f %6.3f %6.3f...",
 //				_nEval, x[0], x[1], x[2]);
 
-//		_orient.setTo(cv::Scalar::all(128));
+//		_orient.setTo(Scalar::all(128));
 
 		double err = 0;
 		int cnt = 0, good = 0;
@@ -470,8 +476,8 @@ public:
 
 //		printf(" %6.3f\n", diff);
 
-//		cv::namedWindow("debug-test1");
-//		cv::imshow("debug-test1", _orient);
+//		namedWindow("debug-test1");
+//		imshow("debug-test1", _orient);
 
 		return err;
 	}
@@ -484,8 +490,8 @@ public:
 	void drawDebug(Mat& sphere, Mat& orient)
 	{
 		if( _do_display ) {
-			cv::resize(_sphere, sphere, sphere.size());
-			cv::resize(_orient, orient, orient.size());
+			resize(_sphere, sphere, sphere.size());
+			resize(_orient, orient, orient.size());
 		}
 	}
 
@@ -565,9 +571,9 @@ void getAxesVecs(
 
 	// get initial axes
 	double o0[3] = {0.0, 0.0, 0.0};
-	double x0[3] = {0.2, 0.0, 0.0};
-	double y0[3] = {0.0, 0.2, 0.0};
-	double z0[3] = {0.0, 0.0, 0.2};
+	double x0[3] = {0.25, 0.0, 0.0};
+	double y0[3] = {0.0, 0.25, 0.0};
+	double z0[3] = {0.0, 0.0, 0.25};
 
 	// rotate axes
 	double o1[3] = {0};
@@ -594,7 +600,7 @@ void getAxesVecs(
 class PlaneHomography : public NLoptFunc
 {
 public:
-	PlaneHomography(vector<cv::Point3f>& corners)
+	PlaneHomography(vector<Point3f>& corners)
 	:	_corners(corners)
 	{
 		// tx ty tz rx ry rz
@@ -640,23 +646,23 @@ public:
 	}
 
 private:
-	vector<cv::Point3f>& _corners;
+	vector<Point3f>& _corners;
 };
 
 void mouseCallback(int event, int x, int y, int flags, void* param)
 {
-	vector<cv::Point>* click = (vector<cv::Point>*)param;
+	vector<Point>* click = (vector<Point>*)param;
 
 	switch (event) {
 //	case CV_EVENT_MOUSEMOVE:
 //		break;
 	case CV_EVENT_LBUTTONDOWN:
 //		printf("mouse: %d %d\n", x, y);
-		click->push_back(cv::Point(x,y));
+		click->push_back(Point(x,y));
 		break;
 	case CV_EVENT_RBUTTONDOWN:
 //		printf("right mouse: %d %d\n", x, y);
-		click->push_back(cv::Point(-1,-1));
+		click->push_back(Point(-1,-1));
 //		pthread_mutex_lock(&_GPSPATH_MUTX);
 //		printf("terminating\n");
 //		_GPSPATH_ACTIVE = false;
@@ -680,10 +686,10 @@ struct s_input {
 	CameraModelPtr cam_model, remap_model;
 	CameraRemapPtr remapper;
 	RemapTransformPtr roi_transform;
-	Mat mask;
+	Mat remap_mask;
 	bool use_ball_colour;
 	CmPoint32f fg_yuv, bg_yuv;
-	int thresh_win;
+	double thresh_win;
 	double thresh_ratio;
 	int frame_skip;
 };
@@ -692,44 +698,41 @@ double SEGMENT_TIME = 0;
 
 void* grabInputFrames(void* obj)
 {
-	Utils::SET_PROCESS_PRIORITY(-10);
+	Utils::SET_PROCESS_PRIORITY(-5);
 
 	s_input* input = (s_input*)obj;
 	int rheight = input->remap_height, rwidth = input->remap_width;
 	Mat frame_grey(input->height, input->width, CV_8UC1);
+	Mat remap_bgr(rheight, rwidth, CV_8UC3);
+	remap_bgr.setTo(Scalar::all(0));
+	Mat remap_yuv(rheight, rwidth, CV_8UC3);
+	remap_yuv.setTo(Scalar::all(0));
+	Mat remap_blur(rheight, rwidth, CV_8UC1);
+	remap_blur.setTo(Scalar::all(0));
+
 	double thresh_ratio = input->thresh_ratio;
-	int thresh_size = 64;
-	int thresh_win = input->thresh_win;
+	int thresh_win = (int)round(input->thresh_win*rwidth) | 0x01;
 	int thresh_rad = (thresh_win-1)/2;
-	Mat thresh_remap(thresh_size, thresh_size, CV_8UC1);
-	Mat thresh_thresh(thresh_size, thresh_size, CV_8UC1);
-	Mat thresh_mask(thresh_size, thresh_size, CV_8UC1);
-	Mat thresh_min(thresh_size, thresh_size, CV_8UC1);
-	Mat thresh_max(thresh_size, thresh_size, CV_8UC1);
-	double thresh_fov = input->remap_model->getFOV();
-	double thresh_radPerPix = thresh_fov/double(thresh_size);
-	CameraModelPtr thresh_model = CameraModel::createFisheye(
-			thresh_size, thresh_size, thresh_radPerPix, thresh_fov);
-	CameraRemapPtr thresh_remapper = CameraRemapPtr(new CameraRemap(
-			input->cam_model, thresh_model, input->roi_transform));
-	Mat remap_mask(rheight, rwidth, CV_8UC1);
-	if( !input->mask.empty() ) {
-		thresh_remapper->apply(input->mask, thresh_mask);
-		input->remapper->apply(input->mask, remap_mask);
-	} else {
-		thresh_mask.setTo(cv::Scalar::all(255));
-		remap_mask.setTo(cv::Scalar::all(255));
-	}
+//	int thresh_max_x = rwidth-thresh_win-1;
+//	int thresh_max_y = rheight-thresh_win-1;
+	Mat thresh_min(rheight, rwidth, CV_8UC1);
+	Mat thresh_max(rheight, rwidth, CV_8UC1);
+
+	Mat remap_mask = input->remap_mask.clone();
+
 	bool use_ball_colour = input->use_ball_colour;
 	double fgu = input->fg_yuv.y, fgv = input->fg_yuv.z;
 	double bgu = input->bg_yuv.y, bgv = input->bg_yuv.z;
+
+#if EXTRA_DEBUG_WINDOWS
+	namedWindow("roi", WINDOW_NORMAL);
+	namedWindow("thresh", WINDOW_NORMAL);
+#endif // EXTRA_DEBUG_WINDOWS
 
 	// rewind to video start
 	if( !input->cam_input ) { input->cap->rewind(); }
 
 	// run while active
-	Mat remap_bgr(rheight, rwidth, CV_8UC3);
-	Mat remap_yuv(rheight, rwidth, CV_8UC3);
 	int grab_errs = 0;
 	int frame_cnt = 0;
 	while( ACTIVE ) {
@@ -746,9 +749,9 @@ void* grabInputFrames(void* obj)
 
 		Mat frame_bgr(input->height, input->width, CV_8UC3);
 		if( !input->cap->grab(frame_bgr) ) {
-			fprintf(stderr, "ERROR: grabbing camera frame!\n");
+			fprintf(stderr, "ERROR: Can't get new frame!\n");
 			fflush(stderr);
-			if( !(input->cam_input) && (++grab_errs > 1) ) {
+			if( !(input->cam_input) && (++grab_errs > 0) ) {
 				pthread_mutex_lock(&input->mutex);
 				ACTIVE = false;
 				pthread_cond_broadcast(&(input->cond));
@@ -759,21 +762,32 @@ void* grabInputFrames(void* obj)
 		if( frame_cnt <= input->frame_skip ) { continue; }
 		double timestamp = input->cap->getTimestamp();
 
-		/// Remap
-		Mat remap(rheight, rwidth, CV_8UC1);
-		remap.setTo(cv::Scalar::all(128));
+		// output thresholded image
+		Mat remap_grey(rheight, rwidth, CV_8UC1);
+		remap_grey.setTo(Scalar::all(128));
+
+		// vars for cached min/max
+		int win_it = 0;
+		uint8_t win_max_hist[thresh_win];
+		uint8_t win_min_hist[thresh_win];
 
 //		double t1 = Utils::GET_CLOCK();
 
 		if( use_ball_colour ) {
+			/// Threshold ROI using UV colour space.
 			input->remapper->apply(frame_bgr, remap_bgr);
-			cv::cvtColor(remap_bgr, remap_yuv, CV_BGR2YUV);
+
+#if EXTRA_DEBUG_WINDOWS
+			imshow("roi", remap_bgr);
+#endif // EXTRA_DEBUG_WINDOWS
+
+			cvtColor(remap_bgr, remap_yuv, CV_BGR2YUV);
 			for( int i = 0; i < rheight; i++ ) {
 				uint8_t* pyuv = remap_yuv.ptr(i);
-				uint8_t* pgrey = remap.ptr(i);
+				uint8_t* pgrey = remap_grey.ptr(i);
 				uint8_t* pmask = remap_mask.ptr(i);
 				for( int j = 0; j < rwidth; j++ ) {
-					if( pmask[j] < 255 ) { continue; }
+					if( pmask[j] < 250 ) { continue; }
 					uint8_t u = pyuv[3*j+1];
 					uint8_t v = pyuv[3*j+2];
 					double fgd = sqrt((u-fgu)*(u-fgu)+(v-fgv)*(v-fgv));
@@ -786,32 +800,128 @@ void* grabInputFrames(void* obj)
 				}
 			}
 		} else {
-			/// Remap thresholding image
-			thresh_remap.setTo(cv::Scalar::all(128));
-			cv::cvtColor(frame_bgr, frame_grey, CV_BGR2GRAY);
-			thresh_remapper->apply(frame_grey, thresh_remap);
-			thresh_min.setTo(cv::Scalar::all(255));
-			thresh_max.setTo(cv::Scalar::all(0));
-			for( int i = 0; i < thresh_size; i++ ) {
-				uint8_t* pmask = thresh_mask.ptr(i);
-//				uint8_t* premap = thresh_remap.ptr(i);
-//				uint8_t* pthresh = thresh_thresh.ptr(i);
+			/// Threshold ROI using adaptive algorithm.
+			cvtColor(frame_bgr, frame_grey, CV_BGR2GRAY);
+			input->remapper->apply(frame_grey, remap_grey);
+
+#if EXTRA_DEBUG_WINDOWS
+			imshow("roi", remap_grey);
+#endif // EXTRA_DEBUG_WINDOWS
+
+			// pre-processing
+			//blur(remap_grey, remap_blur, Size(3,3), Point(-1,-1), BORDER_REPLICATE);
+			medianBlur(remap_grey, remap_blur, 3);
+
+			thresh_min.setTo(Scalar::all(255));
+			thresh_max.setTo(Scalar::all(0));
+
+#if 1
+			/** cached min/max **/
+			// pre-fill first col
+			uint8_t max = 0, min = 255;
+			for( int i = 0; i < thresh_rad; i++ ) {		// last row is computed in next block (before testing)
+				max = 0; min = 255;
+				uint8_t* pmask = remap_mask.ptr(i);
+				uint8_t* pgrey = remap_blur.ptr(i);
+				for( int j = 0; j <= thresh_rad; j++ ) {
+					if( pmask[j] < 250 ) { continue; }
+					uint8_t g = pgrey[j];
+					if( (g > max) && (g < 255) ) { max = g; }	// ignore overexposed regions
+					if( g < min ) { min = g; }
+				}
+				win_max_hist[win_it++] = max;
+				win_min_hist[win_it++] = min;
+			}
+
+			// compute window min/max
+			uint8_t* pthrmax = thresh_max.data;
+			uint8_t* pthrmin = thresh_min.data;
+			for( int j = 0; j < rwidth; j++ ) {
+				for( int i = 0; i < rheight; i++ ) {
+					// add row
+					max = 0; min = 255;
+					if( (i+thresh_rad) < rheight ) {
+						uint8_t* pmask = remap_mask.ptr(i+thresh_rad);
+						uint8_t* pgrey = remap_blur.ptr(i+thresh_rad);
+						for( int s = -thresh_rad; s <= thresh_rad; s++ ) {
+							int js = j+s;
+							if( (js < 0) || (js >= rwidth) ) { continue; }
+							if( pmask[js] < 250 ) { continue; }
+							uint8_t g = pgrey[js];
+							if( (g > max) && (g < 255) ) { max = g; }	// ignore overexposed regions
+							if( g < min ) { min = g; }
+						}
+					} else {
+						// pre-fill next cols
+						uint8_t* pmask = remap_mask.ptr(i+thresh_rad-rheight);
+						uint8_t* pgrey = remap_blur.ptr(i+thresh_rad-rheight);
+						for( int s = -thresh_rad; s <= thresh_rad; s++ ) {
+							int js = j+s+1;
+							if( (js < 0) || (js >= rwidth) ) { continue; }
+							if( pmask[js] < 250 ) { continue; }
+							uint8_t g = pgrey[js];
+							if( (g > max) && (g < 255) ) { max = g; }	// ignore overexposed regions
+							if( g < min ) { min = g; }
+						}
+					}
+					win_max_hist[win_it] = max;
+					win_min_hist[win_it] = min;
+
+					// find window max/min
+					max = 0; min =255;
+					for( int k = 0; k < thresh_win; k++ ) {
+						int ik = i+thresh_rad-k;
+						if( (ik >= rheight) || (ik < 0) ) { continue; }
+						int wk = win_it-k;
+						if( wk < 0 ) { wk += thresh_win; }
+						uint8_t mx = win_max_hist[wk];
+						if( mx > max ) { max = mx; }
+						uint8_t mn = win_min_hist[wk];
+						if( mn < min ) { min = mn; }
+					}
+					pthrmax[i*thresh_max.step+j] = max;
+					pthrmin[i*thresh_min.step+j] = min;
+					if( ++win_it >= thresh_win ) { win_it -= thresh_win; }
+				}
+			}
+#else
+			/** naive min/max **/
+			for( int i = 0; i < rheight; i++ ) {
+				uint8_t* pmask = remap_mask.ptr(i);
 				uint8_t* pthrmin = thresh_min.ptr(i);
 				uint8_t* pthrmax = thresh_max.ptr(i);
-				for( int j = 0; j < thresh_size; j++ ) {
-					if( pmask[j] < 255 ) {
-//						pthresh[j] = 0;
-						continue;
+
+				// handle borders
+				int y = i-thresh_rad;
+				int thresh_win_y = thresh_win;
+				if( y < 0 ) {
+					thresh_win_y += y;
+					y = 0;
+				} else if( y > thresh_max_y ) {
+					thresh_win_y += thresh_max_y-y;
+					y = thresh_max_y;
+				}
+				for( int j = 0; j < rwidth; j++ ) {
+					if( pmask[j] < 250 ) { continue; }
+
+					// handle borders
+					int x = j-thresh_rad;
+					int thresh_win_x = thresh_win;
+					if( x < 0 ) {
+						thresh_win_x += x;
+						x = 0;
+					} else if( x > thresh_max_x ) {
+						thresh_win_x += thresh_max_x-x;
+						x = thresh_max_x;
 					}
-					int x = Maths::CLAMP(j-thresh_rad,0,thresh_size-thresh_win-1);
-					int y = Maths::CLAMP(i-thresh_rad,0,thresh_size-thresh_win-1);
-					Mat thresh_roi = thresh_remap(cv::Rect(x,y,thresh_win,thresh_win));
-					Mat mask_roi = thresh_mask(cv::Rect(x,y,thresh_win,thresh_win));
-					for( int s = 0; s < thresh_win; s++ ) {
+
+					Mat thresh_roi = remap_blur(Rect(x,y,thresh_win_x,thresh_win_y));
+					Mat mask_roi = remap_mask(Rect(x,y,thresh_win_x,thresh_win_y));
+					for( int s = 0; s < thresh_win_y; s++ ) {
 						uint8_t* ppmask = mask_roi.ptr(s);
 						uint8_t* ppthresh = thresh_roi.ptr(s);
-						for( int t = 0; t < thresh_win; t++ ) {
-							if( ppmask[t] < 255 ) { continue; }
+						for( int t = 0; t < thresh_win_x; t++ ) {
+							if( ppmask[t] < 250 ) { continue; }
 							uint8_t v = ppthresh[t];
 							if( v < pthrmin[j] ) { pthrmin[j] = v; }
 							if( v > pthrmax[j] ) { pthrmax[j] = v; }
@@ -819,27 +929,24 @@ void* grabInputFrames(void* obj)
 					}
 				}
 			}
-			cv::medianBlur(thresh_min, thresh_min, 3);
-			cv::medianBlur(thresh_max, thresh_max, 3);
-			for( int i = 0; i < thresh_size; i++ ) {
-				uint8_t* pmask = thresh_mask.ptr(i);
-				uint8_t* premap = thresh_remap.ptr(i);
-				uint8_t* pthresh = thresh_thresh.ptr(i);
+#endif
+			for( int i = 0; i < rheight; i++ ) {
+				uint8_t* pmask = remap_mask.ptr(i);
+				uint8_t* premap = remap_grey.ptr(i);
 				uint8_t* pthrmin = thresh_min.ptr(i);
 				uint8_t* pthrmax = thresh_max.ptr(i);
-				for( int j = 0; j < thresh_size; j++ ) {
-					if( pmask[j] < 255 ) {
-						pthresh[j] = 128;
+				for( int j = 0; j < rwidth; j++ ) {
+					if( pmask[j] < 250 ) {
+						premap[j] = 128;
 						continue;
 					}
 					if( (thresh_ratio*(premap[j]-pthrmin[j])) <= (pthrmax[j]-premap[j]) ) {
-						pthresh[j] = 0;
+						premap[j] = 0;
 					} else {
-						pthresh[j] = 255;
+						premap[j] = 255;
 					}
 				}
 			}
-			cv::resize(thresh_thresh, remap, remap.size());
 		}
 
 //		double t2 = Utils::GET_CLOCK();
@@ -881,22 +988,26 @@ void* grabInputFrames(void* obj)
 //
 //			int adapt_win = 65;
 //			adapt_win |= 1;
-//			cv::adaptiveThreshold(thresh_remap, thresh_remap, 255,
-//					cv::ADAPTIVE_THRESH_GAUSSIAN_C,
-//					cv::THRESH_BINARY,
+//			adaptiveThreshold(thresh_remap, thresh_remap, 255,
+//					ADAPTIVE_THRESH_GAUSSIAN_C,
+//					THRESH_BINARY,
 //					adapt_win, -10);
 //
-//			cv::namedWindow("thresh_debug");
-//			cv::imshow("thresh_debug", thresh_remap);
-//			cv::waitKey(0);
+//			namedWindow("thresh_debug");
+//			imshow("thresh_debug", thresh_remap);
+//			waitKey(0);
 //
-//			cv::resize(thresh_remap, remap, remap.size());
-//			cv::GaussianBlur(remap, remap, cvSize(3, 3), 0);
+//			resize(thresh_remap, remap, remap.size());
+//			GaussianBlur(remap, remap, cvSize(3, 3), 0);
 //		}
+
+		#if EXTRA_DEBUG_WINDOWS
+			imshow("thresh", remap_grey);
+		#endif // EXTRA_DEBUG_WINDOWS
 
 		pthread_mutex_lock(&(input->mutex));
 		input->frame_q.push_back(frame_bgr);
-		input->remap_q.push_back(remap);
+		input->remap_q.push_back(remap_grey);
 		input->timestamp_q.push_back(timestamp);
 		pthread_cond_broadcast(&(input->cond));
 		pthread_mutex_unlock(&(input->mutex));
@@ -962,7 +1073,6 @@ void* socketListener(void* params)
 	bzero((char *) &serv_addr, sizeof(serv_addr));
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_addr.s_addr = INADDR_ANY;
-	//serv_addr.sin_port = htons(_socket->portno);
 	serv_addr.sin_port = htons(0);
 	if( bind(_socket->sockfd, (struct sockaddr *)&serv_addr, len) < 0 ) {
 		fprintf(stderr, "ERROR: binding socket!\n");
@@ -980,6 +1090,7 @@ void* socketListener(void* params)
 	getsockname(_socket->sockfd, (struct sockaddr *)&serv_addr, &len);
 	_socket->portno = ntohs(serv_addr.sin_port);
 	printf("** SOCKET BOUND ON PORT %d **\n", _socket->portno);
+	fflush(stdout);
 	_socket->state = 1;
 
 	while( ACTIVE ) {
@@ -989,8 +1100,8 @@ void* socketListener(void* params)
 			FD_ZERO(&rfds);
 			FD_SET(_socket->sockfd, &rfds);
 			timeval tv;
-			tv.tv_sec = 1;
-			tv.tv_usec = 0;
+			tv.tv_sec = 0;
+			tv.tv_usec = 100000;
 			int retval = select(_socket->sockfd+1, &rfds, NULL, NULL, &tv);
 			if( retval > 0 ) {
 				newsockfd = accept(_socket->sockfd, (struct sockaddr *) &cli_addr, &len);
@@ -1075,19 +1186,18 @@ int main(int argc, char *argv[])
 	/// LICENSE
 	///
 	{
-		string build_string = Utils::GET_DATE_STRING();
 		printf("\n\n\n#######################################################################\n");
 		printf("#                                                                     #\n");
 		printf("# FicTrac: A webcam-based method for generating fictive animal paths. #\n");
-		printf("# Version: public release (build %s)                          #\n", build_string.c_str());
-		printf("# Copyright (C) 2011-2014 Richard Moore (rjdmoore@uqconnect.edu)      #\n");
+		printf("# Version: public release (build %s)                          #\n", BUILD_STRING);
+		printf("# Copyright (C) 2011-2015 Richard Moore (rjdmoore@uqconnect.edu)      #\n");
 		printf("#                                                                     #\n");
 		printf("#######################################################################\n");
 		printf("#                                                                     #\n");
 		printf("# This software uses libraries from the following projects:           #\n");
-		printf("#     - OpenCV (http://opencv.willowgarage.com)                       #\n");
-		printf("#     - FFmpeg (http://ffmpeg.org)                                    #\n");
+		printf("#     - OpenCV (http://opencv.org)                                    #\n");
 		printf("#     - Cairo (http://www.cairographics.org)                          #\n");
+		printf("#     - NLopt (http://ab-initio.mit.edu/nlopt/)                       #\n");
 		printf("# These libraries are not distributed with this release but are       #\n");
 		printf("# freely available as open-source projects.                           #\n");
 		printf("#                                                                     #\n");
@@ -1111,13 +1221,13 @@ int main(int argc, char *argv[])
 	}
 
 	// Setup OpenCV drawing thread.
-	cv::startWindowThread();
+	startWindowThread();
 
 	// Catch cntl-c
 	signal(SIGINT, TERMINATE);
 
 	// Set high priority (when run as SU)
-	Utils::SET_PROCESS_PRIORITY(-18);
+	Utils::SET_PROCESS_PRIORITY(-15);
 
 	///
 	/// LOAD PROGRAM VARIABLES
@@ -1143,10 +1253,9 @@ int main(int argc, char *argv[])
 	double nlopt_ftol = 1e-3, error_thresh = 6000;
 	int nlopt_max_eval = 100, max_bad_frames = 0;
 	double nlopt_res = 0.5;
-	int thresh_win = 15;
+	double thresh_win = 0.2;
 	double thresh_ratio = 1.25;
 	bool do_led_display = false, do_socket_out = false;
-//	int socket_port = DEFAULT_SOCKET_PORTNO;
 	BAYER_TYPE bayer_type = BAYER_NONE;
 	double sphere_orient[3] = {0,0,0};
 	bool force_draw_config = false;
@@ -1159,200 +1268,161 @@ int main(int argc, char *argv[])
 	int serial_baud = 115200;
 	string serial_port = "/dev/ttyS0";
 
+	// read in config file
 	if( argc <= 1 ) {
-		printf("Input config file required!\n");
+		printf("Input config file required (invocation: ./fictrac /path/to/config.txt)!\n");
 		fflush(stdout);
 		exit(-1);
 	}
-	string config_fn(argv[1]);
-	string config;
-	if( !Utils::READ_FILE_TO_STRING(config_fn, config) ) {
-		fprintf(stderr, "ERROR: reading config file!\n");
-		fflush(stderr);
+	std::ifstream file(argv[1],std::ifstream::in);
+	if( !file.is_open() ) {
+		fprintf(stderr, "%s: Error, unable to open file (%s)!\n", __func__, argv[1]);
 		exit(-1);
 	}
+
+	string line;
 	deque<string> tokens;
-	Utils::TOKENISE(config, tokens);
-	while( tokens.size() > 1 ) {
-		if( tokens.front().compare("input_vid_fn") == 0 ) {
-			tokens.pop_front();
-			input_vid_fn = tokens.front();
-			printf("config: input_vid_fn\t%s\n", input_vid_fn.c_str());
-		} else if( tokens.front().compare("output_fn") == 0 ) {
-			tokens.pop_front();
-			output_fn = tokens.front();
-			printf("config: output_fn\t%s\n", output_fn.c_str());
-		} else if( tokens.front().compare("mask_fn") == 0 ) {
-			tokens.pop_front();
-			mask_fn = tokens.front();
-			printf("config: mask_fn\t%s\n", mask_fn.c_str());
-		} else if( tokens.front().compare("transform_fn") == 0 ) {
-			tokens.pop_front();
-			transform_fn = tokens.front();
-			printf("config: transform_fn\t%s\n", transform_fn.c_str());
-		} else if( tokens.front().compare("template_fn") == 0 ) {
-			tokens.pop_front();
-			template_fn = tokens.front();
-			printf("config: template_fn\t%s\n", template_fn.c_str());
-		} else if( tokens.front().compare("closed_loop_fn") == 0 ) {
-			tokens.pop_front();
-			closed_loop_fn = tokens.front();
-			printf("config: closed_loop_fn\t%s\n", closed_loop_fn.c_str());
-		} else if( tokens.front().compare("frame_skip") == 0 ) {
-			tokens.pop_front();
-			frame_skip = atoi(tokens.front().c_str());
-			printf("config: frame_skip\t%d\n", frame_skip);
-		} else if( tokens.front().compare("frame_step") == 0 ) {
-			tokens.pop_front();
-			frame_step = max(atoi(tokens.front().c_str()), 1);
-			printf("config: frame_step\t%d\n", frame_step);
-		} else if( tokens.front().compare("do_display") == 0 ) {
-			tokens.pop_front();
-			do_display = bool(atoi(tokens.front().c_str()));
-			printf("config: do_display\t%d\n", do_display);
-		} else if( tokens.front().compare("no_prompts") == 0 ) {
-			tokens.pop_front();
-			no_prompts = bool(atoi(tokens.front().c_str()));
-			printf("config: no_prompts\t%d\n", no_prompts);
-		} else if( tokens.front().compare("do_config") == 0 ) {
-			tokens.pop_front();
-			do_config = bool(atoi(tokens.front().c_str()));
-			printf("config: do_config\t%d\n", do_config);
-		} else if( tokens.front().compare("save_video") == 0 ) {
-			tokens.pop_front();
-			save_video = bool(atoi(tokens.front().c_str()));
-			printf("config: save_video\t%d\n", save_video);
-		} else if( tokens.front().compare("save_input_video") == 0 ) {
-			tokens.pop_front();
-			save_input_video = bool(atoi(tokens.front().c_str()));
-			printf("config: save_input_video\t%d\n", save_input_video);
-		} else if( tokens.front().compare("do_search") == 0 ) {
-			tokens.pop_front();
-			do_search = bool(atoi(tokens.front().c_str()));
-			printf("config: do_search\t%d\n", do_search);
-		} else if( tokens.front().compare("do_update") == 0 ) {
-			tokens.pop_front();
-			do_update = bool(atoi(tokens.front().c_str()));
-			printf("config: do_update\t%d\n", do_update);
-		} else if( tokens.front().compare("load_template") == 0 ) {
-			tokens.pop_front();
-			load_template = bool(atoi(tokens.front().c_str()));
-			printf("config: load_template\t%d\n", load_template);
-		} else if( tokens.front().compare("fisheye") == 0 ) {
-			tokens.pop_front();
-			fisheye = bool(atoi(tokens.front().c_str()));
-			printf("config: fisheye\t\t%d\n", fisheye);
-		} else if( tokens.front().compare("cam_input") == 0 ) {
-			tokens.pop_front();
-			cam_input = bool(atoi(tokens.front().c_str()));
-			printf("config: cam_input\t%d\n", cam_input);
-		} else if( tokens.front().compare("fps") == 0 ) {
-			tokens.pop_front();
-			fps = atoi(tokens.front().c_str());
-			printf("config: fps\t\t%d\n", fps);
-		} else if( tokens.front().compare("cam_index") == 0 ) {
-			tokens.pop_front();
-			cam_index = atoi(tokens.front().c_str());
-			printf("config: cam_index\t\t%d\n", cam_index);
-		} else if( tokens.front().compare("use_ball_colour") == 0 ) {
-			tokens.pop_front();
-			use_ball_colour = bool(atoi(tokens.front().c_str()));
-			printf("config: use_ball_colour\t%d\n", use_ball_colour);
-		} else if( tokens.front().compare("vfov") == 0 ) {
-			tokens.pop_front();
-			vfov = Utils::STR2NUM(tokens.front())*Maths::D2R;
-			printf("config: vfov\t\t%f\n", vfov*Maths::R2D);
-		} else if( tokens.front().compare("quality_factor") == 0 ) {
-			tokens.pop_front();
-			quality_factor = atoi(tokens.front().c_str());
-			printf("config: quality_factor\t%d\n", quality_factor);
-		} else if( tokens.front().compare("nlopt_ftol") == 0 ) {
-			tokens.pop_front();
-			nlopt_ftol = Utils::STR2NUM(tokens.front());
-			printf("config: nlopt_ftol\t%f\n", nlopt_ftol);
-		} else if( tokens.front().compare("nlopt_max_eval") == 0 ) {
-			tokens.pop_front();
-			nlopt_max_eval = atoi(tokens.front().c_str());
-			printf("config: nlopt_max_eval\t%d\n", nlopt_max_eval);
-		} else if( tokens.front().compare("error_thresh") == 0 ) {
-			tokens.pop_front();
-			error_thresh = Utils::STR2NUM(tokens.front());
-			printf("config: error_thresh\t%f\n", error_thresh);
-		} else if( tokens.front().compare("thresh_win") == 0 ) {
-			tokens.pop_front();
-			thresh_win = atoi(tokens.front().c_str()) | 0x01;
-			printf("config: thresh_win\t%d\n", thresh_win);
-		} else if( tokens.front().compare("thresh_ratio") == 0 ) {
-			tokens.pop_front();
-			thresh_ratio = Utils::STR2NUM(tokens.front());
-			printf("config: thresh_ratio\t%f\n", thresh_ratio);
-		} else if( tokens.front().compare("max_bad_frames") == 0 ) {
-			tokens.pop_front();
-			max_bad_frames = atoi(tokens.front().c_str());
-			printf("config: max_bad_frames\t%d\n", max_bad_frames);
-		} else if( tokens.front().compare("do_serial_out") == 0 ) {
-			tokens.pop_front();
-			do_serial_out = bool(atoi(tokens.front().c_str()));
-			printf("config: do_serial_out\t%d\n", do_serial_out);
-		} else if( tokens.front().compare("serial_baud") == 0 ) {
-			tokens.pop_front();
-			serial_baud = atoi(tokens.front().c_str());
-			printf("config: serial_baud\t%d\n", serial_baud);
-		} else if( tokens.front().compare("serial_port") == 0 ) {
-			tokens.pop_front();
-			serial_port = tokens.front();
-			printf("config: serial_port\t%s\n", serial_port.c_str());
-		} else if( tokens.front().compare("do_led_display") == 0 ) {
-			tokens.pop_front();
-			do_led_display = bool(atoi(tokens.front().c_str()));
-			printf("config: do_led_display\t%d\n", do_led_display);
-		} else if( tokens.front().compare("do_socket_out") == 0 ) {
-			tokens.pop_front();
-			do_socket_out = bool(atoi(tokens.front().c_str()));
-			printf("config: do_socket_out\t%d\n", do_socket_out);
-//		} else if( tokens.front().compare("socket_port") == 0 ) {
-//			tokens.pop_front();
-//			socket_port = atoi(tokens.front().c_str());
-//			printf("config: socket_port\t%d\n", socket_port);
-		} else if( tokens.front().compare("sphere_orient") == 0 ) {
-					tokens.pop_front();
-					sphere_orient[0] = atof(tokens.front().c_str());
-					tokens.pop_front();
-					sphere_orient[1] = atof(tokens.front().c_str());
-					tokens.pop_front();
-					sphere_orient[2] = atof(tokens.front().c_str());
-					printf("config: sphere_orient\t%f %f %f\n",
-							sphere_orient[0], sphere_orient[1], sphere_orient[2]);
-		} else if( tokens.front().compare("bayer_type") == 0 ) {
-			tokens.pop_front();
-			int tmp = atoi(tokens.front().c_str());
-			switch( tmp ) {
-				case BAYER_BGGR:
-					bayer_type = BAYER_BGGR;
-					break;
-				case BAYER_GBRG:
-					bayer_type = BAYER_GBRG;
-					break;
-				case BAYER_GRBG:
-					bayer_type = BAYER_GRBG;
-					break;
-				case BAYER_RGGB:
-					bayer_type = BAYER_RGGB;
-					break;
-				default:
-					printf("Unknown BAYER_TYPE (%d)! Defaulting to BAYER_NONE.\n", tmp);
-					bayer_type = BAYER_NONE;
-					break;
+	getline(file, line);
+	while(!file.eof()) {
+		Utils::TOKENISE(line, tokens);
+		if( tokens.size() > 1 ) {
+			if( tokens.front().compare("input_vid_fn") == 0 ) {
+				tokens.pop_front();
+				input_vid_fn = tokens.front();
+			} else if( tokens.front().compare("output_fn") == 0 ) {
+				tokens.pop_front();
+				output_fn = tokens.front();
+			} else if( tokens.front().compare("mask_fn") == 0 ) {
+				tokens.pop_front();
+				mask_fn = tokens.front();
+			} else if( tokens.front().compare("transform_fn") == 0 ) {
+				tokens.pop_front();
+				transform_fn = tokens.front();
+			} else if( tokens.front().compare("template_fn") == 0 ) {
+				tokens.pop_front();
+				template_fn = tokens.front();
+			} else if( tokens.front().compare("closed_loop_fn") == 0 ) {
+				tokens.pop_front();
+				closed_loop_fn = tokens.front();
+			} else if( tokens.front().compare("frame_skip") == 0 ) {
+				tokens.pop_front();
+				frame_skip = atoi(tokens.front().c_str());
+			} else if( tokens.front().compare("frame_step") == 0 ) {
+				tokens.pop_front();
+				frame_step = max(atoi(tokens.front().c_str()), 1);
+			} else if( tokens.front().compare("do_display") == 0 ) {
+				tokens.pop_front();
+				do_display = bool(atoi(tokens.front().c_str()));
+			} else if( tokens.front().compare("no_prompts") == 0 ) {
+				tokens.pop_front();
+				no_prompts = bool(atoi(tokens.front().c_str()));
+			} else if( tokens.front().compare("do_config") == 0 ) {
+				tokens.pop_front();
+				do_config = bool(atoi(tokens.front().c_str()));
+			} else if( tokens.front().compare("save_video") == 0 ) {
+				tokens.pop_front();
+				save_video = bool(atoi(tokens.front().c_str()));
+			} else if( tokens.front().compare("save_input_video") == 0 ) {
+				tokens.pop_front();
+				save_input_video = bool(atoi(tokens.front().c_str()));
+			} else if( tokens.front().compare("do_search") == 0 ) {
+				tokens.pop_front();
+				do_search = bool(atoi(tokens.front().c_str()));
+			} else if( tokens.front().compare("do_update") == 0 ) {
+				tokens.pop_front();
+				do_update = bool(atoi(tokens.front().c_str()));
+			} else if( tokens.front().compare("load_template") == 0 ) {
+				tokens.pop_front();
+				load_template = bool(atoi(tokens.front().c_str()));
+			} else if( tokens.front().compare("fisheye") == 0 ) {
+				tokens.pop_front();
+				fisheye = bool(atoi(tokens.front().c_str()));
+			} else if( tokens.front().compare("cam_input") == 0 ) {
+				tokens.pop_front();
+				cam_input = bool(atoi(tokens.front().c_str()));
+			} else if( tokens.front().compare("fps") == 0 ) {
+				tokens.pop_front();
+				fps = atoi(tokens.front().c_str());
+			} else if( tokens.front().compare("cam_index") == 0 ) {
+				tokens.pop_front();
+				cam_index = atoi(tokens.front().c_str());
+			} else if( tokens.front().compare("use_ball_colour") == 0 ) {
+				tokens.pop_front();
+				use_ball_colour = bool(atoi(tokens.front().c_str()));
+			} else if( tokens.front().compare("vfov") == 0 ) {
+				tokens.pop_front();
+				vfov = Utils::STR2NUM(tokens.front())*Maths::D2R;
+			} else if( tokens.front().compare("quality_factor") == 0 ) {
+				tokens.pop_front();
+				quality_factor = atoi(tokens.front().c_str());
+			} else if( tokens.front().compare("nlopt_ftol") == 0 ) {
+				tokens.pop_front();
+				nlopt_ftol = Utils::STR2NUM(tokens.front());
+			} else if( tokens.front().compare("nlopt_max_eval") == 0 ) {
+				tokens.pop_front();
+				nlopt_max_eval = atoi(tokens.front().c_str());
+			} else if( tokens.front().compare("error_thresh") == 0 ) {
+				tokens.pop_front();
+				error_thresh = Utils::STR2NUM(tokens.front());
+			} else if( tokens.front().compare("thresh_win") == 0 ) {
+				tokens.pop_front();
+				thresh_win = Utils::STR2NUM(tokens.front());
+			} else if( tokens.front().compare("thresh_ratio") == 0 ) {
+				tokens.pop_front();
+				thresh_ratio = Utils::STR2NUM(tokens.front());
+			} else if( tokens.front().compare("max_bad_frames") == 0 ) {
+				tokens.pop_front();
+				max_bad_frames = atoi(tokens.front().c_str());
+			} else if( tokens.front().compare("do_serial_out") == 0 ) {
+				tokens.pop_front();
+				do_serial_out = bool(atoi(tokens.front().c_str()));
+			} else if( tokens.front().compare("serial_baud") == 0 ) {
+				tokens.pop_front();
+				serial_baud = atoi(tokens.front().c_str());
+			} else if( tokens.front().compare("serial_port") == 0 ) {
+				tokens.pop_front();
+				serial_port = tokens.front();
+			} else if( tokens.front().compare("do_led_display") == 0 ) {
+				tokens.pop_front();
+				do_led_display = bool(atoi(tokens.front().c_str()));
+			} else if( tokens.front().compare("do_socket_out") == 0 ) {
+				tokens.pop_front();
+				do_socket_out = bool(atoi(tokens.front().c_str()));
+			} else if( tokens.front().compare("sphere_orient") == 0 ) {
+						tokens.pop_front();
+						sphere_orient[0] = atof(tokens.front().c_str());
+						tokens.pop_front();
+						sphere_orient[1] = atof(tokens.front().c_str());
+						tokens.pop_front();
+						sphere_orient[2] = atof(tokens.front().c_str());
+			} else if( tokens.front().compare("bayer_type") == 0 ) {
+				tokens.pop_front();
+				int tmp = atoi(tokens.front().c_str());
+				switch( tmp ) {
+					case BAYER_BGGR:
+						bayer_type = BAYER_BGGR;
+						break;
+					case BAYER_GBRG:
+						bayer_type = BAYER_GBRG;
+						break;
+					case BAYER_GRBG:
+						bayer_type = BAYER_GRBG;
+						break;
+					case BAYER_RGGB:
+						bayer_type = BAYER_RGGB;
+						break;
+					default:
+						printf("Unknown BAYER_TYPE (%d)! Defaulting to BAYER_NONE.\n", tmp);
+						bayer_type = BAYER_NONE;
+						break;
+				}
+			} else if( tokens.front().compare("force_draw_config") == 0 ) {
+				tokens.pop_front();
+				force_draw_config = bool(atoi(tokens.front().c_str()));
 			}
-			printf("config: bayer_type\t%d\n", bayer_type);
-		} else if( tokens.front().compare("force_draw_config") == 0 ) {
-			tokens.pop_front();
-			force_draw_config = bool(atoi(tokens.front().c_str()));
-			printf("config: force_draw_config\t%d\n", force_draw_config);
-		} else {
-			printf("Unknown config string (%s), ignoring...\n", tokens.front().c_str());
 		}
-		tokens.pop_front();
+		// ignore the remainder of the line
+		getline(file, line);
 	}
 
 	if( !cam_input && input_vid_fn.empty() ) {
@@ -1373,6 +1443,12 @@ int main(int argc, char *argv[])
 
 	if( output_fn.empty() ) {
 		fprintf(stderr, "ERROR: no output_fn specified!\n");
+		fflush(stderr);
+		exit(-1);
+	}
+
+	if( (thresh_win <= 0) || (thresh_win >= 1) ) {
+		fprintf(stderr, "ERROR: thesh_win is now defined as a %% of the ROI window and must be within the range (0,1)!\n");
 		fflush(stderr);
 		exit(-1);
 	}
@@ -1406,49 +1482,49 @@ int main(int argc, char *argv[])
 	}
 
 	printf("\nInitialising program variables:\n");
-	printf("input_vid_fn:\t.\t%s\n", input_vid_fn.c_str());
-	printf("output_fn:\t.\t%s\n", output_fn.c_str());
-	printf("mask_fn:\t.\t%s\n", mask_fn.c_str());
-	printf("transform_fn:\t.\t%s\n", transform_fn.c_str());
-	printf("template_fn:\t.\t%s\n", template_fn.c_str());
-	printf("closed_loop_fn:\t.\t%s\n", closed_loop_fn.c_str());
-	printf("debug_video_fn:\t.\t%s\n", debug_video_fn.c_str());
-	printf("frames_video_fn:.\t%s\n", frames_video_fn.c_str());
-	printf("frame_skip:\t.\t%d\n", frame_skip);
-	printf("frame_step:\t.\t%d\n", frame_step);
-	printf("do_display:\t.\t%d\n", do_display);
-	printf("no_prompts:\t.\t%d\n", no_prompts);
-	printf("do_config:\t.\t%d\n", do_config);
-	printf("save_video:\t.\t%d\n", save_video);
-	printf("save_input_video:\t%d\n", save_input_video);
-	printf("do_search:\t.\t%d\n", do_search);
-	printf("do_update:\t.\t%d\n", do_update);
-	printf("load_template:\t.\t%d\n", load_template);
-	printf("fisheye:\t.\t%d\n", fisheye);
-	printf("cam_input:\t.\t%d\n", cam_input);
-	printf("fps:\t.\t.\t%d\n", fps);
-	printf("cam_index:\t.\t%d\n", cam_index);
-	printf("use_ball_colour:.\t%d\n", use_ball_colour);
-	printf("vfov:\t.\t.\t%f\n", vfov*Maths::R2D);
-	printf("quality_factor:\t.\t%d\n", quality_factor);
-	printf("remap_width:\t.\t%d\n", remap_width);
-	printf("remap_height:\t.\t%d\n", remap_height);
-	printf("sphere_width:\t.\t%d\n", sphere_width);
-	printf("sphere_height:\t.\t%d\n", sphere_height);
-	printf("nlopt_ftol:\t.\t%f\n", nlopt_ftol);
-	printf("nlopt_max_eval:\t.\t%d\n", nlopt_max_eval);
-	printf("error_thresh:\t.\t%f\n", error_thresh);
-	printf("thresh_win:\t.\t%d\n", thresh_win);
-	printf("thresh_ratio:\t.\t%f\n", thresh_ratio);
-	printf("do_serial_out:\t.\t%d\n", do_serial_out);
-	printf("serial_baud:\t.\t%d\n", serial_baud);
-	printf("serial_port:\t.\t%s\n", serial_port.c_str());
-	printf("do_led_display:\t.\t%d\n", do_led_display);
-	printf("do_socket_out:\t.\t%d\n", do_socket_out);
-//	printf("socket_port:\t.\t%d\n", socket_port);
-	printf("sphere_orient:\t.\t%f %f %f\n",
+	printf("input_vid_fn: .  .  '%s'\n", input_vid_fn.c_str());
+	printf("output_fn: .  .  .  '%s'\n", output_fn.c_str());
+	printf("mask_fn:.  .  .  .  '%s'\n", mask_fn.c_str());
+	printf("transform_fn: .  .  '%s'\n", transform_fn.c_str());
+	printf("template_fn:  .  .  '%s'\n", template_fn.c_str());
+	printf("closed_loop_fn:  .  '%s'\n", closed_loop_fn.c_str());
+	printf("debug_video_fn:  .  '%s'\n", debug_video_fn.c_str());
+	printf("frames_video_fn: .  '%s'\n", frames_video_fn.c_str());
+	printf("frame_skip:.  .  .  %d\n", frame_skip);
+	printf("frame_step:.  .  .  %d\n", frame_step);
+	printf("do_display:.  .  .  %d\n", do_display);
+	printf("no_prompts:.  .  .  %d\n", no_prompts);
+	printf("do_config: .  .  .  %d\n", do_config);
+	printf("save_video:.  .  .  %d\n", save_video);
+	printf("save_input_video:.  %d\n", save_input_video);
+	printf("do_search: .  .  .  %d\n", do_search);
+	printf("do_update: .  .  .  %d\n", do_update);
+	printf("load_template:.  .  %d\n", load_template);
+	printf("fisheye:.  .  .  .  %d\n", fisheye);
+	printf("cam_input: .  .  .  %d\n", cam_input);
+	printf("fps: .  .  .  .  .  %d\n", fps);
+	printf("cam_index: .  .  .  %d\n", cam_index);
+	printf("use_ball_colour: .  %d\n", use_ball_colour);
+	printf("vfov:.  .  .  .  .  %f\n", vfov*Maths::R2D);
+	printf("quality_factor:  .  %d\n", quality_factor);
+	printf("remap_width:  .  .  %d\n", remap_width);
+	printf("remap_height: .  .  %d\n", remap_height);
+	printf("sphere_width: .  .  %d\n", sphere_width);
+	printf("sphere_height:.  .  %d\n", sphere_height);
+	printf("nlopt_ftol:.  .  .  %f\n", nlopt_ftol);
+	printf("nlopt_max_eval:  .  %d\n", nlopt_max_eval);
+	printf("error_thresh: .  .  %f\n", error_thresh);
+	printf("thresh_win:.  .  .  %f (%d px)\n", thresh_win, (int)round(thresh_win*remap_width) | 0x01);
+	printf("thresh_ratio: .  .  %f\n", thresh_ratio);
+	printf("do_serial_out:.  .  %d\n", do_serial_out);
+	printf("serial_baud:  .  .  %d\n", serial_baud);
+	printf("serial_port:  .  .  '%s'\n", serial_port.c_str());
+	printf("do_led_display:  .  %d\n", do_led_display);
+	printf("do_socket_out:.  .  %d\n", do_socket_out);
+	printf("sphere_orient:.  .  %f %f %f\n",
 			sphere_orient[0], sphere_orient[1], sphere_orient[2]);
-	printf("bayer_type:\t.\t%d\n", bayer_type);
+	printf("bayer_type:.  .  .  %d\n", bayer_type);
+	printf("force_draw_config:  %d\n", force_draw_config);
 	printf("\n");
 
 	fflush(stdout);
@@ -1538,14 +1614,13 @@ int main(int argc, char *argv[])
 		}
 
 		// display
-		cv::namedWindow("FicTrac-config");
-//		cvMoveWindow("FicTrac-config", 10, 10);
+		namedWindow("FicTrac-config");
 		VsDraw::Ptr vsdraw = VsDraw::Ptr(new VsDraw);
 		vsdraw->openImage(cam_model, frame_bgr);
 		vsdraw->grey(255);
 		vsdraw->thickness(1.5);
 		vsdraw->display("FicTrac-config");
-		vector<cv::Point> click;
+		vector<Point> click;
 		cvSetMouseCallback("FicTrac-config", mouseCallback, &click);
 
 		// zoomed sphere roi for precision
@@ -1560,7 +1635,7 @@ int main(int argc, char *argv[])
 		RemapTransformPtr roi_transform = MatrixRemapTransform::createFromOmega(omegav);
 		CameraRemapPtr zoom_remapper = CameraRemapPtr(
 				new CameraRemap(cam_model, zoom_model, roi_transform));
-		cv::Mat zoom_bgr(400,400,CV_8UC3);
+		Mat zoom_bgr(400,400,CV_8UC3);
 
 		Mat save_img(height, width, CV_8UC3);
 
@@ -1568,7 +1643,7 @@ int main(int argc, char *argv[])
 		printf("\n  Select the centre of the sphere's ROI.\n");
 		fflush(stdout);
 		click.clear();
-		int roi_state = 0;
+		int roi_state = 0, roi_state_cnt = 0;
 		bool roi_done = false;
 		double sphere_cx = 0, sphere_cy = 0;
 		while( !roi_done ) {
@@ -1576,7 +1651,7 @@ int main(int argc, char *argv[])
 				// select sphere centre
 				case 0:
 				{
-					cv::waitKey(10);
+					waitKey(10);
 					if( click.size() > 0 ) {
 						if( click[0].x < 0 || click[0].y < 0 ) { click.clear(); continue; }
 						sphere_cx = click[0].x;
@@ -1598,10 +1673,10 @@ int main(int argc, char *argv[])
 				// select sphere radius
 				case 1:
 				{
-					cv::waitKey(10);
+					waitKey(10);
 					if( click.size() > 0 ) {
 						if( click[0].x < 0 || click[0].y < 0 ) { click.clear(); continue; }
-						cv::Point sc = click.front();
+						Point sc = click.front();
 						click.clear();
 						double sphere_circum[3] = {0};
 						cam_model->pixelIndexToVector(sc.x, sc.y, sphere_circum);
@@ -1609,6 +1684,7 @@ int main(int argc, char *argv[])
 						sphere_fov = acos(Maths::DOT_VEC(sphere_centre, sphere_circum))*2.0;
 						printf("sphere FoV: %.2f degrees\n", sphere_fov*Maths::R2D);
 						CmPoint32f axis(sphere_centre[0], sphere_centre[1], sphere_centre[2]);
+						vsdraw->alpha(0.4);
 						vsdraw->circle(axis, sphere_fov/2.0);
 						vsdraw->display("FicTrac-config");
 						roi_state++;
@@ -1622,7 +1698,7 @@ int main(int argc, char *argv[])
 				// adjust centre/radius
 				case 2:
 				{
-					uint16_t key = cv::waitKey(50);
+					uint16_t key = waitKey(50);
 					switch( key ) {
 						case 0xFF51:
 							sphere_cx -= 0.1;
@@ -1634,6 +1710,7 @@ int main(int argc, char *argv[])
 								vsdraw->grey(255);
 								vsdraw->thickness(1.5);
 								vsdraw->cross(axis, -8);
+								vsdraw->alpha(0.4);
 								vsdraw->circle(axis, sphere_fov/2.0);
 								vsdraw->display("FicTrac-config");
 							}
@@ -1648,6 +1725,7 @@ int main(int argc, char *argv[])
 								vsdraw->grey(255);
 								vsdraw->thickness(1.5);
 								vsdraw->cross(axis, -8);
+								vsdraw->alpha(0.4);
 								vsdraw->circle(axis, sphere_fov/2.0);
 								vsdraw->display("FicTrac-config");
 							}
@@ -1662,6 +1740,7 @@ int main(int argc, char *argv[])
 								vsdraw->grey(255);
 								vsdraw->thickness(1.5);
 								vsdraw->cross(axis, -8);
+								vsdraw->alpha(0.4);
 								vsdraw->circle(axis, sphere_fov/2.0);
 								vsdraw->display("FicTrac-config");
 							}
@@ -1676,6 +1755,7 @@ int main(int argc, char *argv[])
 								vsdraw->grey(255);
 								vsdraw->thickness(1.5);
 								vsdraw->cross(axis, -8);
+								vsdraw->alpha(0.4);
 								vsdraw->circle(axis, sphere_fov/2.0);
 								vsdraw->display("FicTrac-config");
 							}
@@ -1688,6 +1768,7 @@ int main(int argc, char *argv[])
 								vsdraw->grey(255);
 								vsdraw->thickness(1.5);
 								vsdraw->cross(axis, -8);
+								vsdraw->alpha(0.4);
 								vsdraw->circle(axis, sphere_fov/2.0);
 								vsdraw->display("FicTrac-config");
 								printf("sphere FoV: %.1f degrees\n", sphere_fov*Maths::R2D);
@@ -1701,13 +1782,15 @@ int main(int argc, char *argv[])
 								vsdraw->grey(255);
 								vsdraw->thickness(1.5);
 								vsdraw->cross(axis, -8);
+								vsdraw->alpha(0.4);
 								vsdraw->circle(axis, sphere_fov/2.0);
 								vsdraw->display("FicTrac-config");
 								printf("sphere FoV: %.1f degrees\n", sphere_fov*Maths::R2D);
 							}
 							break;
-						case 0xA:
-						case 0xD:
+						case 0x0A:
+						case 0x0D:
+						case 0xFF8D:
 							roi_done = true;
 							break;
 						default:
@@ -1727,12 +1810,13 @@ int main(int argc, char *argv[])
 						zoom_remapper->apply(frame_bgr, zoom_bgr);
 
 						// display zoom image
-						cv::namedWindow("Zoom ROI");
+						namedWindow("Zoom ROI");
 						CmPoint32f axis(0,0,1);
 						vsdraw_zoom->openImage(zoom_model, zoom_bgr);
 						vsdraw_zoom->grey(255);
 						vsdraw_zoom->thickness(1.5);
 						vsdraw_zoom->cross(axis, -8);
+						vsdraw_zoom->alpha(0.4);
 						vsdraw_zoom->circle(axis, sphere_fov/2.0);
 						vsdraw_zoom->display("Zoom ROI");
 					}
@@ -1741,21 +1825,22 @@ int main(int argc, char *argv[])
 
 				default:
 				{
-					cv::waitKey(10);
+					waitKey(10);
 					break;
 				}
 			}
+			roi_state_cnt++;
 		}
 
 		// destroy zoom window
-		cv::destroyWindow("Zoom ROI");
+		destroyWindow("Zoom ROI");
 
 		printf("sphere ROI centre: (%.2f, %.2f, %.2f) radius: %.1f degrees\n",
 				sphere_centre[0], sphere_centre[1], sphere_centre[2],
 				sphere_fov*Maths::R2D/2.0);
 		fflush(stdout);
 
-		vector<cv::Point3f> corners;	// fl fr br bl
+		vector<Point3f> corners;	// fl fr br bl
 		if( fisheye ) {
 			// select fl, fr, br, bl corners
 			printf("\n  Select each corner of the plate.\n  Begin with the FL, then FR, BR, and BL.\n\n");
@@ -1768,15 +1853,15 @@ int main(int argc, char *argv[])
 					double vec[3] = {0};
 					cam_model->pixelIndexToVector(click.back().x, click.back().y, vec);
 					Maths::NORMALISE_VEC(vec);
-					cv::Point3f cnr(vec[0], vec[1], vec[2]);
+					Point3f cnr(vec[0], vec[1], vec[2]);
 					corners.push_back(cnr);
 					CmPoint32f axis(vec[0], vec[1], vec[2]);
-					vsdraw->point(axis, -4, false);
+					vsdraw->point(axis, -4, false, true);
 					vsdraw->display("FicTrac-config");
 					clicks++;
 				}
 				if( clicks >= 4 ) { break; }
-				cv::waitKey(10);
+				waitKey(10);
 			}
 		} else {
 			// select left, top, right, bottom sides
@@ -1790,13 +1875,13 @@ int main(int argc, char *argv[])
 						double vec[3] = {0};
 						cam_model->pixelIndexToVector(click.back().x, click.back().y, vec);
 						CmPoint32f axis(vec[0], vec[1], vec[2]);
-						vsdraw->point(axis, -4, false);
+						vsdraw->point(axis, -4, false, false);
 						vsdraw->display("FicTrac-config");
 					}
 					clicks++;
 				}
 				if( clicks >= 8 ) { break; }
-				cv::waitKey(10);
+				waitKey(10);
 			}
 
 			// draw edges
@@ -1830,14 +1915,14 @@ int main(int argc, char *argv[])
 				double vec[3] = {0};
 				cam_model->pixelIndexToVector(px, py, vec);
 				Maths::NORMALISE_VEC(vec);
-				corners.push_back(cv::Point3f(vec[0], vec[1], vec[2]));
+				corners.push_back(Point3f(vec[0], vec[1], vec[2]));
 
 //				printf("(%6.1f, %6.1f): %.1f %.1f %.1f\n",
 //						px, py, vec[0], vec[1], vec[2]);
 				printf("(%6.1f, %6.1f)\n", px, py);
 
 				CmPoint32f axis(vec[0], vec[1], vec[2]);
-				vsdraw->point(axis, -6, false);
+				vsdraw->point(axis, -6, false, true);
 			}
 			vsdraw->display("FicTrac-config");
 		}
@@ -1878,11 +1963,11 @@ int main(int argc, char *argv[])
 					if( ending ) { break; }
 					clicks++;
 				}
-				cv::waitKey(10);
+				waitKey(10);
 			}
-			cv::Mat fg_mask(height, width, CV_8UC1);
-			fg_mask.setTo(cv::Scalar::all((0)));
-			cv::fillConvexPoly(fg_mask, &click[0], click.size(), CV_RGB(255,255,255), 8, 0);
+			Mat fg_mask(height, width, CV_8UC1);
+			fg_mask.setTo(Scalar::all((0)));
+			fillConvexPoly(fg_mask, &click[0], click.size(), CV_RGB(255,255,255), 8, 0);
 
 			printf("\n  Select background region colour.\n  Right mouse click to close polygon.\n\n");
 			fflush(stdout);
@@ -1916,14 +2001,14 @@ int main(int argc, char *argv[])
 					if( ending ) { break; }
 					clicks++;
 				}
-				cv::waitKey(10);
+				waitKey(10);
 			}
-			cv::Mat bg_mask(height, width, CV_8UC1);
-			bg_mask.setTo(cv::Scalar::all((0)));
-			cv::fillConvexPoly(bg_mask, &click[0], click.size(), CV_RGB(255,255,255), 8, 0);
+			Mat bg_mask(height, width, CV_8UC1);
+			bg_mask.setTo(Scalar::all((0)));
+			fillConvexPoly(bg_mask, &click[0], click.size(), CV_RGB(255,255,255), 8, 0);
 
-			cv::Mat frame_yuv;
-			cv::cvtColor(frame_bgr, frame_yuv, CV_BGR2YUV);
+			Mat frame_yuv;
+			cvtColor(frame_bgr, frame_yuv, CV_BGR2YUV);
 
 			vector<uint8_t> fgu, fgv, bgu, bgv;
 			for( int i = 0; i < height; i++ ) {
@@ -2006,13 +2091,13 @@ int main(int argc, char *argv[])
 				printf("(%6.1f, %6.1f)\n", px, py);
 
 				CmPoint32f axis(tl2[0], tl2[1], tl2[2]);
-				vsdraw->cross(axis, -6);
+				vsdraw->cross(axis, -6, true);
 				axis[0] = tr2[0]; axis[1] = tr2[1]; axis[2] = tr2[2];
-				vsdraw->cross(axis, -6);
+				vsdraw->cross(axis, -6, true);
 				axis[0] = br2[0]; axis[1] = br2[1]; axis[2] = br2[2];
-				vsdraw->cross(axis, -6);
+				vsdraw->cross(axis, -6, true);
 				axis[0] = bl2[0]; axis[1] = bl2[1]; axis[2] = bl2[2];
-				vsdraw->cross(axis, -6);
+				vsdraw->cross(axis, -6, true);
 			}
 
 			// draw quad axes
@@ -2024,13 +2109,14 @@ int main(int argc, char *argv[])
 				CmPoint32f vy(yaxis[0], yaxis[1], yaxis[2]);
 				CmPoint32f vz(zaxis[0], zaxis[1], zaxis[2]);
 
-				vsdraw->line(vo, vx);
-				vsdraw->line(vo, vy);
-				vsdraw->line(vo, vz);
+				vsdraw->line(vo, vz, 32, true);
+				vsdraw->line(vo, vy, 32, true);
+				vsdraw->line(vo, vx, 32, true);
+				vsdraw->point(vo, -1, true);
 
 				// return rgb image
 				vsdraw->copyImage(axes_img);
-				cv::cvtColor(axes_img, axes_img, CV_BGR2RGB);
+				cvtColor(axes_img, axes_img, CV_BGR2RGB);
 
 				double px = 0, py = 0;
 				cam_model->vectorToPixelIndex(xaxis, px, py);
@@ -2043,8 +2129,8 @@ int main(int argc, char *argv[])
 				drawText(axes_img, "z",
 						px, py, 1, 255, 255, 255, true, 0);
 
-				cv::cvtColor(axes_img, axes_img, CV_RGB2BGR);
-				cv::imshow("FicTrac-config", axes_img);
+				cvtColor(axes_img, axes_img, CV_RGB2BGR);
+				imshow("FicTrac-config", axes_img);
 			}
 
 			printf("\n  Inspect the configuration image.\n\n  Check that the re-projected corners (crosses) match the projected corners (large circles),\n  and that the projected laboratory coordinate frame is correct.\n  The laboratory axes should form a proper right-handed coordinate frame.\n");
@@ -2076,13 +2162,14 @@ int main(int argc, char *argv[])
 						CmPoint32f vy(yaxis[0], yaxis[1], yaxis[2]);
 						CmPoint32f vz(zaxis[0], zaxis[1], zaxis[2]);
 
-						vsdraw->line(vo, vx);
-						vsdraw->line(vo, vy);
-						vsdraw->line(vo, vz);
+						vsdraw->line(vo, vz, 32, true);
+						vsdraw->line(vo, vy, 32, true);
+						vsdraw->line(vo, vx, 32, true);
+						vsdraw->point(vo, -1, true);
 
 						// return rgb image
 						vsdraw->copyImage(axes_img);
-						cv::cvtColor(axes_img, axes_img, CV_BGR2RGB);
+						cvtColor(axes_img, axes_img, CV_BGR2RGB);
 
 						double px = 0, py = 0;
 						cam_model->vectorToPixelIndex(xaxis, px, py);
@@ -2095,14 +2182,14 @@ int main(int argc, char *argv[])
 						drawText(axes_img, "z",
 								px, py, 1, 255, 255, 255, true, 0);
 
-						cv::cvtColor(axes_img, axes_img, CV_RGB2BGR);
-						cv::imshow("FicTrac-config", axes_img);
+						cvtColor(axes_img, axes_img, CV_RGB2BGR);
+						imshow("FicTrac-config", axes_img);
 					}
 				}
 
 				// do manual adjustment
 				redraw = false;
-				uint16_t key = cv::waitKey(10);
+				uint16_t key = waitKey(10);
 				switch(key) {
 					case 0x78:
 						Maths::ROT_MAT_X_AXIS(O, 2.5*Maths::D2R);
@@ -2117,6 +2204,8 @@ int main(int argc, char *argv[])
 						adjusted = redraw = true;
 						break;
 					case 0x0A:
+					case 0x0D:
+					case 0xFF8D:
 						adjusting = false;
 						break;
 					case 0xFFFF:
@@ -2161,15 +2250,15 @@ int main(int argc, char *argv[])
 		ofs.close();
 
 		printf("Output image file: %s\n", config_img_fn.c_str());
-		cv::imwrite(config_img_fn, save_img);
+		imwrite(config_img_fn, save_img);
 
 		fflush(stdout);
 		if( !no_prompts ) {
 			printf("\n  Press any key to continue...\n\n");
 			fflush(stdout);
-			cv::waitKey(0);
+			waitKey(0);
 		}
-		cv::destroyWindow("FicTrac-config");
+		destroyWindow("FicTrac-config");
 	} else {
 
 		/// Load config params from file.
@@ -2275,13 +2364,13 @@ int main(int argc, char *argv[])
 			printf("(%6.1f, %6.1f)\n", px, py);
 
 			CmPoint32f axis(tl2[0], tl2[1], tl2[2]);
-			vsdraw->cross(axis, -6);
+			vsdraw->cross(axis, -6, true);
 			axis[0] = tr2[0]; axis[1] = tr2[1]; axis[2] = tr2[2];
-			vsdraw->cross(axis, -6);
+			vsdraw->cross(axis, -6, true);
 			axis[0] = br2[0]; axis[1] = br2[1]; axis[2] = br2[2];
-			vsdraw->cross(axis, -6);
+			vsdraw->cross(axis, -6, true);
 			axis[0] = bl2[0]; axis[1] = bl2[1]; axis[2] = bl2[2];
-			vsdraw->cross(axis, -6);
+			vsdraw->cross(axis, -6, true);
 //			vsdraw->display("FicTrac-config");
 
 			// draw quad axes
@@ -2292,13 +2381,14 @@ int main(int argc, char *argv[])
 			CmPoint32f vy(yaxis[0], yaxis[1], yaxis[2]);
 			CmPoint32f vz(zaxis[0], zaxis[1], zaxis[2]);
 
-			vsdraw->line(vo, vx);
-			vsdraw->line(vo, vy);
-			vsdraw->line(vo, vz);
+			vsdraw->line(vo, vz, 32, true);
+			vsdraw->line(vo, vy, 32, true);
+			vsdraw->line(vo, vx, 32, true);
+			vsdraw->point(vo, -1, true);
 
 			// return rgb image
 			vsdraw->copyImage(save_img);
-			cv::cvtColor(save_img, save_img, CV_BGR2RGB);
+			cvtColor(save_img, save_img, CV_BGR2RGB);
 
 			px = 0; py = 0;
 			cam_model->vectorToPixelIndex(xaxis, px, py);
@@ -2311,10 +2401,10 @@ int main(int argc, char *argv[])
 			drawText(save_img, "z",
 					px, py, 1, 255, 255, 255, true, 0);
 
-			cv::cvtColor(save_img, save_img, CV_RGB2BGR);
+			cvtColor(save_img, save_img, CV_RGB2BGR);
 
 			printf("Output image file: %s\n", config_img_fn.c_str());
-			cv::imwrite(config_img_fn, save_img);
+			imwrite(config_img_fn, save_img);
 		}
 
 		fflush(stdout);
@@ -2333,14 +2423,14 @@ int main(int argc, char *argv[])
 				debug_video_fn,
 				4*draw_size, 3*draw_size,
 				512, 384,
-				PIX_FMT_RGB24, 25, -1, 4));
+				AV_PIX_FMT_RGB24, 25, -1, 4));
 	}
 	if( save_input_video ) {
 		input_writer = boost::shared_ptr<AVWriter>(new AVWriter(
 				frames_video_fn,
 				width, height,
 				width, height,
-				PIX_FMT_BGR24, 25, -1, 4));
+				AV_PIX_FMT_BGR24, 25, -1, 4));
 	}
 
 	///
@@ -2385,7 +2475,7 @@ int main(int argc, char *argv[])
 	///
 
 	/// Load mask.
-	Mat mask = cv::imread(mask_fn.c_str(), 0);
+	Mat mask = imread(mask_fn.c_str(), 0);
 	if( mask.empty() ) {
 		fprintf(stderr, "ERROR: loading mask (%s)!\n", mask_fn.c_str());
 		fflush(stderr);
@@ -2395,31 +2485,37 @@ int main(int argc, char *argv[])
 
 	// sphere roi mask
 	Mat mask_remap(remap_height, remap_width, CV_8UC1);
-	mask_remap.setTo(cv::Scalar::all(0));
+	mask_remap.setTo(Scalar::all(0));
 	remapper->apply(mask, mask_remap);
-	int erode_its = max(int(3+round(log(remap_width/60.0)/log(2))),1);	// magic!
-	cv::erode(mask_remap, mask_remap, Mat(), cv::Point(-1,-1), erode_its, cv::BORDER_CONSTANT);
+	int erode_its = 1;//max(int(3+round(log(remap_width/60.0)/log(2))),1);	// magic!
+	erode(mask_remap, mask_remap, Mat(), Point(-1,-1), erode_its, BORDER_CONSTANT, 0);
+
 	// erode can fail near border, so erase.
-	for( int i = 0; i <= erode_its; i++ ) {
-		uint8_t* pmask_top = mask_remap.ptr(i);
-		uint8_t* pmask_bot = mask_remap.ptr(remap_height-i-1);
-		for( int j = 0; j < remap_width; j++ ) {
-			pmask_top[j] = 0;
-			pmask_bot[j] = 0;
-		}
-	}
-	for( int i = 0; i < remap_height; i++ ) {
-		uint8_t* pmask = mask_remap.ptr(i);
-		for( int j = 0; j <= erode_its; j++ ) {
-			pmask[j] = 0;
-			pmask[remap_width-j-1] = 0;
-		}
-	}
+//	for( int i = 0; i <= erode_its; i++ ) {
+//		uint8_t* pmask_top = mask_remap.ptr(i);
+//		uint8_t* pmask_bot = mask_remap.ptr(remap_height-i-1);
+//		for( int j = 0; j < remap_width; j++ ) {
+//			pmask_top[j] = 0;
+//			pmask_bot[j] = 0;
+//		}
+//	}
+//	for( int i = 0; i < remap_height; i++ ) {
+//		uint8_t* pmask = mask_remap.ptr(i);
+//		for( int j = 0; j <= erode_its; j++ ) {
+//			pmask[j] = 0;
+//			pmask[remap_width-j-1] = 0;
+//		}
+//	}
+
+#if EXTRA_DEBUG_WINDOWS
+	namedWindow("mask", CV_NORMAL);
+	imshow("mask", mask_remap);
+#endif // EXTRA_DEBUG_WINDOWS
 
 	/// Load sphere template.
 	Mat sphere_template = Mat();
 	if( load_template ) {
-		sphere_template = cv::imread(template_fn.c_str(), 0);
+		sphere_template = imread(template_fn.c_str(), 0);
 		if( sphere_template.empty() || sphere_template.cols != sphere_width || sphere_template.rows != sphere_height || sphere_template.channels() > 1 ) {
 			fprintf(stderr, "ERROR: loading template (%s)!\n", template_fn.c_str());
 			fflush(stderr);
@@ -2454,7 +2550,7 @@ int main(int argc, char *argv[])
 	input->remap_model = dest_model;
 	input->remapper = remapper;
 	input->roi_transform = roi_transform;
-	input->mask = mask;
+	input->remap_mask = mask_remap;
 	input->use_ball_colour = use_ball_colour;
 	input->fg_yuv = fg_yuv;
 	input->bg_yuv = bg_yuv;
@@ -2568,35 +2664,9 @@ int main(int argc, char *argv[])
 
 	fflush(stdout);
 
+#if LOG_TIMING
 	double t0 = Utils::GET_CLOCK();
-	
-	//added for MCC USB 3101 by Pablo 7/1/14
-	HIDInterface*  hid = 0x0;
-	__u8 channel;
-	__u16 value;
-	hid_return ret;
-	int idx;
-	int nInterfaces = 0;
-
-	ret=hid_init();
-	if (ret!=HID_RET_SUCCESS) {
-	fprintf(stderr, "hid_init failed with return code %d\n", ret);
-	return -1;
-	}
-	if ((nInterfaces = PMD_Find_Interface(&hid, 0, USB3101_PID)) >= 0) {
-    fprintf(stderr, "USB 3101 Device is found! Number of Interfaces = %d\n", nInterfaces);
-	}
-	
-	/* config mask DIO_DIR_OUT (0x00) means all outputs */
-	usbDConfigPort_USB31XX(hid, DIO_DIR_OUT);
-	usbDOut_USB31XX(hid, 0);
-	
-	// Configure all analog channels for 0-10V output
-	for (idx = 0; idx < 8; idx++) {
-	usbAOutConfig_USB31XX(hid, idx, UP_10_00V);
-	}
-	
-	//^^^Pablo-------------------------------------------
+#endif // LOG_TIMING
 
 	unsigned int nframes = 0;
 	double av_err = 0, av_exec_time = 0, av_loop_time = 0, total_dist = 0;
@@ -2973,7 +3043,7 @@ int main(int argc, char *argv[])
 				heading_hist.push_front((2*Maths::PI-heading)*195.0/(2*Maths::PI)+2);
 				if( heading_hist.size() > 395 ) { heading_hist.pop_back(); }
 
-				heading_plot.setTo(cv::Scalar::all(0));
+				heading_plot.setTo(Scalar::all(0));
 				cv::line(heading_plot,
 						cvPoint2D32f(round(2*16), round(99.5*16)),
 						cvPoint2D32f(round(397*16), round(99.5*16)),
@@ -3010,8 +3080,8 @@ int main(int argc, char *argv[])
 							CV_RGB(255,255,255), 1, CV_AA, 4);
 				}
 
-				cv::namedWindow("heading_hist");
-				cv::imshow("heading_hist", heading_plot);
+				namedWindow("heading_hist");
+				imshow("heading_hist", heading_plot);
 			#endif
 
 			// draw movement history
@@ -3053,7 +3123,7 @@ int main(int argc, char *argv[])
 				float scl = std::min(x_scl,y_scl);
 
 				float ppx = 200, ppy = 100;
-				move_plot.setTo(cv::Scalar::all(0));
+				move_plot.setTo(Scalar::all(0));
 				for( unsigned int i = 1; i <= move_hist_x.size(); i++ ) {
 					float px = 200+scl*cum_hist_x[i], py = 100+scl*cum_hist_y[i];
 					cv::line(move_plot,
@@ -3064,8 +3134,8 @@ int main(int argc, char *argv[])
 					ppy = py;
 				}
 
-				cv::namedWindow("move_hist");
-				cv::imshow("move_hist", move_plot);
+				namedWindow("move_hist");
+				imshow("move_hist", move_plot);
 			#endif
 
 			// stats
@@ -3089,27 +3159,28 @@ int main(int argc, char *argv[])
 			clfs << cnt << ", " << intx << ", " << inty << ", " << heading << ", " << cnt << endl;
 		}
 
-		// Serial Out modified by Pablo for MCC USB 3101  7/1/14 
 		if( do_serial_out ) {
-		
+//			static char out[8] = {0,0,0,0,0,0,0,0};
 //			int velx_int = Maths::CLAMP((int)round(65535.0*(velx/nlopt_res+1)/2.0), 0, 65535);		// [-0.5,0.5] -> [0,65535]
 //			int vely_int = Maths::CLAMP((int)round(65535.0*(vely/nlopt_res+1)/2.0), 0, 65535);		// [-0.5,0.5] -> [0,65535]
-//			int headrate_int= Maths::CLAMP((int)round(65535.0*(headrate/nlopt_res+1)/2.0), 0, 65535);
 //			int heading_int = round(65536*heading/(2*Maths::PI));									// [0,2pi) -> [0,65535]
 //			if( heading_int >= 65536 ) { heading_int -= 65536; }
-			
-//			int heading_norm = round(65536*heading/(2*Maths::PI));
-			int comp0 = round(65536*intx/(2*Maths::PI));
-			int comp1 = round(65536*heading/(2*Maths::PI));
-			int comp2 = round(65536*inty/(2*Maths::PI));
-			
-					
-			usbAOut_USB31XX(hid, 0, (__u16) comp1, 0);
-			usbAOut_USB31XX(hid, 3, (__u16) comp2, 0);
-			usbAOut_USB31XX(hid, 1, (__u16) comp0, 0);
-//			usbAOut_USB31XX(hid, channel, (__u16) vely_int, 0);
-//			usbAOut_USB31XX(hid, channel, (__u16) heading_int, 0);
-			
+//			out[0] = 0x52;
+//			out[1] = (velx_int >> 8) & 0xFF;
+//			out[2] = (velx_int) & 0xFF;
+//			out[3] = (vely_int >> 8) & 0xFF;
+//			out[4] = (vely_int) & 0xFF;
+//			out[5] = (heading_int >> 8) & 0xFF;
+//			out[6] = (heading_int) & 0xFF;
+//			out[7] = 0x4D;
+
+			int heading_int = round(256*heading/(2*Maths::PI));
+			if( heading_int >= 256 ) { heading_int -= 256; }
+			uint8_t heading_8bit = heading_int;
+
+			if( serial_write(&_serial, &heading_8bit, 1) != 1 ) {
+				fprintf(stderr, "ERROR: Short write to serial (%s)!\n", serial_port.c_str());
+			}
 		}
 
 		if( do_socket_out ) {
@@ -3159,20 +3230,20 @@ int main(int argc, char *argv[])
 				rectangle(led_display, cvPoint(rhx,0), cvPoint(rhx+3,31), CV_RGB(0,0,0), CV_FILLED, 8, 0);
 			}
 
-			cv::namedWindow("FicTrac-LED_panel", 0);
-			cv::imshow("FicTrac-LED_panel", led_display);
+			namedWindow("FicTrac-LED_panel", 0);
+			imshow("FicTrac-LED_panel", led_display);
 
 			{
-				uint16_t key = cv::waitKey(1);
+				uint16_t key = waitKey(1);
 				if( key == 0x6D ) {
-					cv::setWindowProperty("FicTrac-LED_panel", CV_WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
+					setWindowProperty("FicTrac-LED_panel", CV_WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
 				}
 			}
 		}
 
 		if( do_display || save_video ) {
 			static Mat draw(3*draw_size, 4*draw_size, CV_8UC3);
-			draw.setTo(cv::Scalar::all(0));
+			draw.setTo(Scalar::all(0));
 
 			// input image
 			double radPerPix = sphere_fov*1.5/(2.0*draw_size);
@@ -3180,16 +3251,16 @@ int main(int argc, char *argv[])
 					2*draw_size, 2*draw_size, radPerPix, 360*Maths::D2R);
 			static CameraRemapPtr draw_remapper = CameraRemapPtr(new CameraRemap(
 					cam_model, draw_camera, roi_transform));
-			Mat draw_input = draw(cv::Rect(0, 0, 2*draw_size, 2*draw_size));
-//			draw_input.setTo(cv::Scalar::all(128));
+			Mat draw_input = draw(Rect(0, 0, 2*draw_size, 2*draw_size));
+//			draw_input.setTo(Scalar::all(128));
 			draw_remapper->apply(frame_bgr, draw_input);
 
 			// draw rotation axis
 //			{
 //				double cx = draw_input.cols/2.0, cy = draw_input.rows/2.0;
 //
-//				cv::circle(draw_input,
-//						cv::Point(round(cx*16), round(16*cy)),
+//				circle(draw_input,
+//						Point(round(cx*16), round(16*cy)),
 //						8, CV_RGB(255,255,255), 1, CV_AA, 4);
 //
 //				double c[3];
@@ -3206,9 +3277,9 @@ int main(int argc, char *argv[])
 //				double rx, ry;
 //				draw_camera->vectorToPixelIndex(r, rx, ry);
 //
-//				cv::line(draw_input,
-//						cv::Point(round(cx*16), round(cy*16)),
-//						cv::Point(round(rx*16), round(ry*16)),
+//				line(draw_input,
+//						Point(round(cx*16), round(cy*16)),
+//						Point(round(rx*16), round(ry*16)),
 //						CV_RGB(255, 255, 255), 1, CV_AA, 4);
 //
 //				double d[3] = {w[1], -w[0], 0};
@@ -3221,9 +3292,9 @@ int main(int argc, char *argv[])
 //				double dx, dy;
 //				draw_camera->vectorToPixelIndex(d, dx, dy);
 //
-//				cv::line(draw_input,
-//						cv::Point(round(cx*16), round(cy*16)),
-//						cv::Point(round(dx*16), round(dy*16)),
+//				line(draw_input,
+//						Point(round(cx*16), round(cy*16)),
+//						Point(round(dx*16), round(dy*16)),
 //						CV_RGB(127, 127, 127), 1, CV_AA, 4);
 //			}
 
@@ -3231,7 +3302,7 @@ int main(int argc, char *argv[])
 			// comparison diff image
 			static Mat prev_remap = remap;
 			static Mat comp(remap_height, remap_width, CV_8UC1);
-			comp.setTo(cv::Scalar::all(0));
+			comp.setTo(Scalar::all(0));
 			for( int i = 0; i < remap_height; ++i ) {
 				for( int j = 0; j < remap_width; ++j ) {
 					if( mask_remap.data[i*mask_remap.step+j] < 255 ) { continue; }
@@ -3241,20 +3312,20 @@ int main(int argc, char *argv[])
 
 			// sphere warping
 			static Mat mapX(remap_height, remap_width, CV_32FC1);
-			mapX.setTo(cv::Scalar::all(-1));
+			mapX.setTo(Scalar::all(-1));
 			static Mat mapY(remap_height, remap_width, CV_32FC1);
-			mapY.setTo(cv::Scalar::all(-1));
+			mapY.setTo(Scalar::all(-1));
 			makeSphereRotMaps(dest_model, mapX, mapY, mask_remap,
 					sphere_radius_distance_ratio, guess);
 			boost::shared_ptr<BasicRemapper> warper = boost::shared_ptr<BasicRemapper>(
 					new BasicRemapper(remap_width, remap_height, mapX, mapY));
 			static Mat warp(remap_height, remap_width, CV_8UC1);
-			warp.setTo(cv::Scalar::all(0));
+			warp.setTo(Scalar::all(0));
 			warper->apply(prev_remap, warp);
 
 			// diff image
 			static Mat diff(remap_height, remap_width, CV_8UC1);
-			diff.setTo(cv::Scalar::all(0));
+			diff.setTo(Scalar::all(0));
 			for( int i = 0; i < remap_height; ++i ) {
 				for( int j = 0; j < remap_width; ++j ) {
 					if( mask_remap.data[i*mask_remap.step+j] < 255 ) { continue; }
@@ -3265,12 +3336,12 @@ int main(int argc, char *argv[])
 			// draw roi/comp/warp/diff
 			static Mat draw_roi(draw_size, draw_size, CV_8UC1);
 			static Mat draw_comp(draw_size, draw_size, CV_8UC1);
-			cv::resize(remap, draw_roi, draw_roi.size());
-			cv::resize(comp, draw_comp, draw_comp.size());
+			resize(remap, draw_roi, draw_roi.size());
+			resize(comp, draw_comp, draw_comp.size());
 			static Mat draw_warp(draw_size, draw_size, CV_8UC1);
 			static Mat draw_diff(draw_size, draw_size, CV_8UC1);
-			cv::resize(warp, draw_warp, draw_warp.size());
-			cv::resize(diff, draw_diff, draw_diff.size());
+			resize(warp, draw_warp, draw_warp.size());
+			resize(diff, draw_diff, draw_diff.size());
 			for( int i = 0; i < draw_size; i++ ) {
 				uint8_t* pdraw = &draw.data[i*draw.step];
 				uint8_t* proi = &draw_roi.data[i*draw_roi.step];
@@ -3335,8 +3406,8 @@ int main(int argc, char *argv[])
 					int it = i*res+0.5;
 					double px = cx+scl*map_hist[it].y, py = cy-scl*map_hist[it].x;
 					cv::line(draw,
-							cv::Point(round(ppx*16), round(ppy*16)),
-							cv::Point(round(px*16), round(py*16)),
+							Point(round(ppx*16), round(ppy*16)),
+							Point(round(px*16), round(py*16)),
 							CV_RGB(255, 255, 255), 1, CV_AA, 4);
 					ppx = px;
 					ppy = py;
@@ -3363,21 +3434,21 @@ int main(int argc, char *argv[])
 //
 //				double cx = draw_input.cols/2.0, cy = draw_input.rows/2.0;
 //
-//				cv::circle(draw_input,
-//						cv::Point(round(cx*16), round(16*cy)),
+//				circle(draw_input,
+//						Point(round(cx*16), round(16*cy)),
 //						8, CV_RGB(255,255,255), 1, CV_AA, 4);
 //
-//				cv::line(draw_input,
-//						cv::Point(round(cx*16), round(cy*16)),
-//						cv::Point(round((cx+x1[0])*16), round((cy+x1[1])*16)),
+//				line(draw_input,
+//						Point(round(cx*16), round(cy*16)),
+//						Point(round((cx+x1[0])*16), round((cy+x1[1])*16)),
 //						CV_RGB(255, 255, 255), 1, CV_AA, 4);
-//				cv::line(draw_input,
-//						cv::Point(round(cx*16), round(cy*16)),
-//						cv::Point(round((cx+y1[0])*16), round((cy+y1[1])*16)),
+//				line(draw_input,
+//						Point(round(cx*16), round(cy*16)),
+//						Point(round((cx+y1[0])*16), round((cy+y1[1])*16)),
 //						CV_RGB(255, 255, 255), 1, CV_AA, 4);
-//				cv::line(draw_input,
-//						cv::Point(round(cx*16), round(cy*16)),
-//						cv::Point(round((cx+z1[0])*16), round((cy+z1[1])*16)),
+//				line(draw_input,
+//						Point(round(cx*16), round(cy*16)),
+//						Point(round((cx+z1[0])*16), round((cy+z1[1])*16)),
 //						CV_RGB(255, 255, 255), 1, CV_AA, 4);
 //
 //				drawText(draw_input, "x",
@@ -3441,8 +3512,8 @@ int main(int argc, char *argv[])
 						int b = mix*draw_input.data[int(py+0.5)*draw_input.step+3*int(px+0.5)+0]+(1-mix)*255;
 
 						cv::line(draw_input,
-								cv::Point(round(px*16), round(py*16)),
-								cv::Point(round(ppx*16), round(ppy*16)),
+								Point(round(px*16), round(py*16)),
+								Point(round(ppx*16), round(ppy*16)),
 								CV_RGB(r,g,b), 1, CV_AA, 4);
 					}
 					ppx = px;
@@ -3502,13 +3573,13 @@ int main(int argc, char *argv[])
 					255, 255, 255, 2);
 
 			if( do_display ) {
-				cv::namedWindow("FicTrac-debug");
-				cv::imshow("FicTrac-debug", draw);
+				namedWindow("FicTrac-debug");
+				imshow("FicTrac-debug", draw);
 	//			cvMoveWindow("FicTrac-debug", 10, 10);
 			}
 
 			if( save_video ) {
-				cv::cvtColor(draw, draw, CV_BGR2RGB);
+				cvtColor(draw, draw, CV_BGR2RGB);
 				writer->enqueue_frame(draw);
 			}
 
@@ -3535,24 +3606,24 @@ int main(int argc, char *argv[])
 		if( fps == 0 ) {
 			// wait until user presses a key
 			if( do_display ) {
-				key = cv::waitKey(0);
+				key = waitKey(0);
 			} else {
 				getchar();
 			}
 		} else if( fps > 0) {
 			// if cam_input, wait time required for fps, else wait 1ms
-			key = cv::waitKey(int(wait_time+0.5));
+			key = waitKey(int(wait_time+0.5));
 		} else if( do_display ) {
-			key = cv::waitKey(1);
+			key = waitKey(1);
 		}
 		if( key == 0x73 ) {
 			printf("Saving sphere template to disk (%s)...\n", template_fn.c_str());
 			fflush(stdout);
-			cv::imwrite(template_fn, sphere.getTemplate());
+			imwrite(template_fn, sphere.getTemplate());
 		} else if( key == 0x70 ) {
 			printf("\n  Press any key to continue...\n");
 			fflush(stdout);
-			if( do_display) { cv::waitKey(0); }
+			if( do_display) { waitKey(0); }
 		} else if( key == 0x1B ) {
 			printf("Exiting program...\n");
 			fflush(stdout);
@@ -3594,7 +3665,7 @@ int main(int argc, char *argv[])
 	{
 		printf("\nSaving sphere template to disk (%s)...\n", template_fn.c_str());
 		fflush(stdout);
-		cv::imwrite(template_fn, sphere.getTemplate());
+		imwrite(template_fn, sphere.getTemplate());
 	}
 
 	ACTIVE = false;
@@ -3621,9 +3692,10 @@ int main(int argc, char *argv[])
 		pthread_mutex_destroy(&_socket->mutex);
 	}
 
-//	clfs.close();
 	#if LOG_TIMING
 		timing.close();
 	#endif
+
 	if( do_serial_out ) { serial_close(&_serial); }
 }
+

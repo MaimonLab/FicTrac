@@ -1,0 +1,78 @@
+== VERSION HISTORY ==
+Build version is listed in the header printed to stdout upon execution.
+
+* Build 2015.03.26
+    - Minor speed improvement for adaptive thresholding.
+* Build 2015.03.17
+    - Build version string in header now shows correct build version date.
+* Build 2015.03.11
+    - Configuration feedback markings drawn semi-transparent.
+* Build 2015.03.09
+    - Removed FFmpeg dependency for video writing (now uses OpenCV writer).
+* Build 2015.03.08
+    - Fixed crash when initialising video writer.
+    - Changed adaptive thresholding: local min/max now computed from blurred
+      input image; thresholding more dependent on 'quality' in config file;
+      'thresh_win' now defined as percentage (0,1) of ROI frame width.
+* Build 2014.07.14
+    - User now required to approve lab coordinate frame config, and can seed
+      the initial estimate to avoid bad lab coordinate frame transformations.
+* Build 2014.07.10
+    - Debug/output video text string to "FicTrac DD/MM/YYYY".
+* Build 2014.06.24
+    - Don't report missing transform file as an error when config forced.
+* Build 2014.06.18
+    - Don't terminate due to frame drops when using camera input.
+    - Updated misc textual output.
+* Build 2014.05.22
+    - Reduced # consecutive frame drops before termination (now 2).
+* Build 2013.12.16
+    - Stable, JNM publication release.
+
+== OPEN BUGS ==
+This is a list of known bugs with the software, please contact the author if
+you encounter any additional bugs.
+
+Possible bug statuses:
+  - UNKWN: The bug has been reported but not confirmed on multiple platforms.
+  - CONFM: There is definitely a bug, but I haven't done anything about it yet.
+  - HACKD: A solution or work-around has been put in place.
+  - FIXED: The bug has been eradicated.
+
+| #    | AFFECTED VERSIONS | STATUS | DESCRIPTION                              |
+|======|===================|========|==========================================|
+| 1    | < 2014.07.14      | HACKD  | For certain camera orientations w.r.t.   |
+|      |                   |        | the trackball, the config procedure      |
+|      |                   |        | returns lab axes that are invalid. The   |
+|      |                   |        | axes appear either upside down or as a   |
+|      |                   |        | left-handed coordinate frame (they should|
+|      |                   |        | form a right-handed coordinate frame).   |
+|      |                   |        | See BUG #2 for the work-around.          |
+|------|-------------------|--------|------------------------------------------|
+| 2    | >= 2014.07.14     | CONFM  | The user is now requested to approve the |
+|      |                   |        | lab coordinate axes and can seed the auto|
+|      |                   |        | config procedure with an approximate axis|
+|      |                   |        | orientation if the original automatically|
+|      |                   |        | computed axis is invalid. However, the   |
+|      |                   |        | user must still recognise and reject     |
+|      |                   |        | invalid candidate axes.                  |
+|------|-------------------|--------|------------------------------------------|
+| 3    | ALL               | CONFM  | Issues with GigE cameras, including      |
+|      |                   |        | inability to set camera frame rate via   |
+|      |                   |        | FicTrac.                                 |
+|------|-------------------|--------|------------------------------------------|
+| 4    | < 2015.03.08?     | FIXED  | FFmpeg update caused program crash       |
+|      |                   |        | during AVWriter initialisation. Problem  |
+|      |                   |        | library call removed.                    |
+|------|-------------------|--------|------------------------------------------|
+| 5    | ALL               | UNKWN  | When executing from some video files     |
+|      |                   |        | (usually high bitrate), the feedback     |
+|      |                   |        | markings usually drawn to screen during  |
+|      |                   |        | configuration are invisible. A work-     |
+|      |                   |        | around is to re-encode the troublesome   |
+|      |                   |        | videos (avconv default .mp4 looks fine). |
+|------|-------------------|--------|------------------------------------------|
+| 5    | < 2015.03.17      | FIXED  | Build version string was showing current |
+|      |                   |        | (i.e. execution) date rather than build  |
+|      |                   |        | date.                                    |
+|------|-------------------|--------|------------------------------------------|

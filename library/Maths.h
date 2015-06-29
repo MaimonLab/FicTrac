@@ -4,7 +4,7 @@
  * Class provides some basic maths-related functions.
  * 
  * Richard Moore, 2009.
- * rjdmoore@gmail.com
+ * rjdmoore@uqconnect.edu.au
  */
 
 #ifndef MATHS_H_

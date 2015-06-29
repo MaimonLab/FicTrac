@@ -2,12 +2,13 @@
  * ACWriter.cpp
  *
  *  Created on: 14/03/2012
- *      Author: Richard Moore (rjdmoore@gmail.com)
+ *      Author: Richard Moore (rjdmoore@uqconnect.edu.au)
  */
 
 #include "AVWriter.h"
 #include <Utils.h>
 
+#ifndef OCV_AVWRITER
 extern "C" {
 	#include <libavutil/mathematics.h>
 }
@@ -19,11 +20,11 @@ extern "C" {
 #ifndef PKT_FLAG_KEY
 	#define PKT_FLAG_KEY AV_PKT_FLAG_KEY
 #endif
-
 //static const PixelFormat DST_FORMAT = PIX_FMT_YUVJ420P;
 //static const PixelFormat DST_FORMAT = PIX_FMT_YUVJ422P;
 static const PixelFormat DST_FORMAT = PIX_FMT_YUV420P;
 //static const PixelFormat DST_FORMAT = PIX_FMT_YUV422P;
+#endif // ndef OCV_AVWRITER
 
 // maximum allowed length of video write queue
 // extra frames will be dropped
@@ -35,20 +36,21 @@ using std::max;
 AVWriter::AVWriter(std::string filename,
 		size_t src_width, size_t src_height,
 		size_t dst_width, size_t dst_height,
-		PixelFormat pix_fmt, int fps, int cpu, int q)
-:	_active(true), _thread(0), _filename(filename),
+		AVPixelFormat pix_fmt, int fps, int cpu, int q)
+:	_active(true), _thread(0), _filename(filename + ".avi"),
 	_srcWidth(src_width), _srcHeight(src_height),
 	_dstWidth(dst_width), _dstHeight(dst_height),
-	_pixFmt(pix_fmt), _cpu(cpu), sws_context(NULL)
+	_pixFmt(pix_fmt), _cpu(cpu)
 {
+#ifndef OCV_AVWRITER
+	_pixFmt = pix_fmt;
+	sws_context = NULL;
+
 	av_register_all();
 
 #if (LIBAVFORMAT_VERSION_MAJOR >= 53)
 	avformat_network_init();
 #endif
-
-	pthread_mutex_init(&_mutex,NULL);
-	pthread_cond_init(&_cond,NULL);
 
 	// allocate format context
 	format_context = avformat_alloc_context();
@@ -79,9 +81,7 @@ AVWriter::AVWriter(std::string filename,
 	codec_context->qmin = q;
 	codec_context->qmax = q;
 
-#if (LIBAVFORMAT_VERSION_MAJOR >= 54)
-	avformat_write_header(format_context,NULL);
-#else
+#if (LIBAVFORMAT_VERSION_MAJOR < 54)
 	av_set_parameters(format_context,NULL);
 #endif
 
@@ -142,15 +142,24 @@ AVWriter::AVWriter(std::string filename,
     		_srcWidth, _srcHeight, _pixFmt,
     		codec_context->width, codec_context->height, codec_context->pix_fmt,
 			flags, NULL, NULL, NULL);
+#else
+	if( !_writer.open(_filename.c_str(), CV_FOURCC('M','P','4','2'), fps, cvSize(_dstWidth,_dstHeight)) ) {
+		printf("%s: Error, could not open '%s'\n", __func__, _filename.c_str());
+		_active = false;
+		return;
+	}
+#endif // ndef OCV_AVWRITER
 
-    printf("%s: \t%s opened for video writing\n", __func__, format_context->filename);
+	printf("%s: \t%s opened for video writing\n", __func__, _filename.c_str());
 
-	av_vid_time = 0;
-	av_scl_time = 0;
-	av_enc_time = 0;
-	av_wrt_time = 0;
+//	av_vid_time = 0;
+//	av_scl_time = 0;
+//	av_enc_time = 0;
+//	av_wrt_time = 0;
 
     // start thread
+	pthread_mutex_init(&_mutex,NULL);
+	pthread_cond_init(&_cond,NULL);
 	pthread_create(&_thread, NULL, &PROCESS_FRAMES_TO_WRITE, this);
 }
 
@@ -173,6 +182,7 @@ AVWriter::~AVWriter()
 	_frames_to_write.clear();
 
 	// close writer
+#ifndef OCV_AVWRITER
 	if( format_context ) {
 		printf("%s: Closing video.. ", __func__);
 		int err = av_write_trailer(format_context);
@@ -207,6 +217,11 @@ AVWriter::~AVWriter()
 		}
 		av_freep(&format_context);
 	}
+#else
+	printf("%s: Closing video.. ", __func__);
+	_writer.release();
+	printf("DONE.\n");
+#endif // ndef OCV_AVWRITER
 }
 
 void* PROCESS_FRAMES_TO_WRITE(void* avw)
@@ -228,16 +243,24 @@ void* PROCESS_FRAMES_TO_WRITE(void* avw)
 		// write all frames (even if not active)
 		while( !avwriter->_frames_to_write.empty() ) {
 			/// Retrieve pointer to frame.
+#ifndef OCV_AVWRITER
 			boost::shared_array<uint8_t> frame = avwriter->_frames_to_write.front();
+#else
+			cv::Mat frame = avwriter->_frames_to_write.front();
+#endif // ndef OCV_AVWRITER
 
 			/// Release lock.
 			pthread_mutex_unlock(&(avwriter->_mutex));
 
 			/// Write frame.
+#ifndef OCV_AVWRITER
 			int ret;
 			if( (ret = avwriter->write_frame(frame)) < 0 ) {
 				printf("%s: Error writing video frame (err %d)!\n", __func__, ret);
 			}
+#else
+			avwriter->_writer << frame;
+#endif // OCV_AVWRITER
 
 			/// Obtain lock and release frame.
 			pthread_mutex_lock(&(avwriter->_mutex));
@@ -251,9 +274,10 @@ void* PROCESS_FRAMES_TO_WRITE(void* avw)
 	return NULL;
 }
 
+#ifndef OCV_AVWRITER
 int AVWriter::write_frame(boost::shared_array<uint8_t> frame)
 {
-	timeval scl_time, enc_time, wrt_time, end_time;
+//	timeval scl_time, enc_time, wrt_time, end_time;
 	int w = _srcWidth;
 	if( _pixFmt == PIX_FMT_RGB24 ||
 		_pixFmt == PIX_FMT_BGR24 ) { w *= 3; }
@@ -318,6 +342,7 @@ int AVWriter::write_frame(boost::shared_array<uint8_t> frame)
 //	printf("%s: \tscale/encode/write times: %5.2f/%5.2f/%5.2f ms\n", __func__, av_scl_time, av_enc_time, av_wrt_time);
 	return ret;
 }
+#endif // ndef OCV_AVWRITER
 
 void AVWriter::enqueue_frame(cv::Mat& frame)
 {
@@ -332,15 +357,37 @@ void AVWriter::enqueue_frame(cv::Mat& frame)
 	if (_frames_to_write.size() > AV_MAX_VIDQ_SIZE) {
 		// buffer too long
 		printf("%s: Unable to add frames to queue, max length exceeded (%d)!\n",
-				__func__, _frames_to_write.size());
+				__func__, static_cast<int>(_frames_to_write.size()));
 	} else {
 		// add frame to buffer
+#ifndef OCV_AVWRITER
 		int step = frame.cols*frame.channels();
 		boost::shared_array<uint8_t> my_frame = boost::shared_array<uint8_t>(new uint8_t[frame.rows*step]);
 		for( int i = 0, ii = 0; i < frame.rows; i++, ii+=step ) {
 			memcpy(&my_frame[ii], frame.ptr(i), step);
 		}
 		_frames_to_write.push_back(my_frame);
+#else
+		cv::Mat local_frame;
+		if( (frame.cols == _dstWidth) && (frame.rows == _dstHeight) ) {
+			if( _pixFmt == AV_PIX_FMT_RGB24 ) {
+				cv::cvtColor(frame, local_frame, CV_RGB2BGR);
+			} else if( _pixFmt == AV_PIX_FMT_GRAY8 ) {
+				cv::cvtColor(frame, local_frame, CV_GRAY2BGR);
+			} else {
+				// AV_PIX_FMT_BGR24
+				frame.copyTo(local_frame);
+			}
+		} else {
+			cv::resize(frame, local_frame, cvSize(_dstWidth,_dstHeight));
+			if( _pixFmt == AV_PIX_FMT_RGB24 ) {
+				cv::cvtColor(local_frame, local_frame, CV_RGB2BGR);
+			} else if( _pixFmt == AV_PIX_FMT_GRAY8 ) {
+				cv::cvtColor(local_frame, local_frame, CV_GRAY2BGR);
+			} // else AV_PIX_FMT_BGR24
+		}
+		_frames_to_write.push_back(local_frame);
+#endif // ndef OCV_WRITER
 //		printf("%s: \tthere are now %d frames in the write queue\n", __func__, _frames_to_write.size());
 	}
 

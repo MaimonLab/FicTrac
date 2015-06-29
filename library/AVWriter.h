@@ -4,32 +4,41 @@
  * Threaded object for creating and writing to a video file.
  * 
  * Richard Moore, 2009.
- * rjdmoore@gmail.com
+ * rjdmoore@uqconnect.edu.au
  */
 
 #ifndef AVWRITER_H_
 #define AVWRITER_H_
 
+#define OCV_AVWRITER
+
+#ifndef OCV_AVWRITER
 extern "C" {
 	#include <libavcodec/avcodec.h>
 	#include <libavformat/avformat.h>
 	#include <libswscale/swscale.h>
 }
+#include <boost/shared_array.hpp>
+#endif // ndef OCV_AVWRITER
 
 #include <opencv2/opencv.hpp>
-
-#include <boost/shared_ptr.hpp>
-#include <boost/shared_array.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
 #include <pthread.h>
 
 #include <sys/time.h>
 
 #include <string>
-#include <vector>
 #include <stdint.h>
 
 void* PROCESS_FRAMES_TO_WRITE(void* avwriter);
+
+// copied from ffmpeg
+enum AVPixelFormat {
+    AV_PIX_FMT_RGB24,     ///< packed RGB 8:8:8, 24bpp, RGBRGB...
+    AV_PIX_FMT_BGR24,     ///< packed RGB 8:8:8, 24bpp, BGRBGR...
+    AV_PIX_FMT_GRAY8      ///<        Y        ,  8bpp
+};
 
 class AVWriter
 {
@@ -37,7 +46,7 @@ class AVWriter
 		AVWriter(std::string filename,
 				size_t src_width, size_t src_height,
 				size_t dst_width, size_t dst_height,
-				PixelFormat pix_fmt,
+				AVPixelFormat pix_fmt,
 				int fps=25, int cpu=-1, int q=2);
 		~AVWriter();
 		void enqueue_frame(cv::Mat& frame);
@@ -50,10 +59,11 @@ class AVWriter
 		pthread_cond_t		_cond;
 		std::string			_filename;
 		size_t				_srcWidth, _srcHeight, _dstWidth, _dstHeight;
-		PixelFormat			_pixFmt;
-		
+
+		AVPixelFormat		_pixFmt;
 		int					_cpu;
 
+#ifndef OCV_AVWRITER
 		AVFormatContext*	format_context;
 		AVCodecContext*		codec_context;
 		SwsContext*			sws_context;
@@ -65,13 +75,18 @@ class AVWriter
 		uint8_t*			frame_buffer_scl;
 		uint8_t*			video_buffer;
 		int					video_buff_size;
-		
-		std::string			_avtiming;
-		float				av_vid_time, av_scl_time, av_enc_time, av_wrt_time;
-		
+
 		std::deque<boost::shared_array<uint8_t> >	_frames_to_write;
-		
+
 		int write_frame(boost::shared_array<uint8_t> frame);
+#else
+		cv::VideoWriter		_writer;
+		std::deque<cv::Mat>	_frames_to_write;
+#endif // ndef OCV_AVWRITER
+		
+//		std::string			_avtiming;
+//		float				av_vid_time, av_scl_time, av_enc_time, av_wrt_time;
+		
 		friend void* PROCESS_FRAMES_TO_WRITE(void* avw);
 };
 

@@ -2,7 +2,7 @@
  * CVSource.h
  *
  *  Created on: May 25, 2013
- *      Author: rjdmoore
+ *      Author: rjdmoore@uqconnect.edu.au
  */
 
 #ifndef CVSOURCE_H_
