@@ -42,8 +42,18 @@ SHARED_PTR(CameraRemap);
 #include <netinet/in.h>
 #include <signal.h>
 
+//added by Pablo for MCC USB 3101 6/30/14
+#include <fcntl.h>
+#include <ctype.h>
+#include <asm/types.h>
+
+#include "pmd.h"
+#include "usb-3100.h"
+//these two files and its headers/pointers were added to Fictrac's folder
+//---------------------------------
+
 #define EXTRA_DEBUG_WINDOWS 0
-#define LOG_TIMING 0
+#define LOG_TIMING 1
 
 #ifdef PGR_CAMERA
 	#include "PGRSource.h"
@@ -1265,6 +1275,7 @@ int main(int argc, char *argv[])
 	// serial port
 	serial _serial;
 	bool do_serial_out = false;
+	bool output_position= false;  //added by Pablo 07/2014
 	int serial_baud = 115200;
 	string serial_port = "/dev/ttyS0";
 
@@ -1419,7 +1430,9 @@ int main(int argc, char *argv[])
 			} else if( tokens.front().compare("force_draw_config") == 0 ) {
 				tokens.pop_front();
 				force_draw_config = bool(atoi(tokens.front().c_str()));
-			}
+			} else if( tokens.front().compare("output_position") == 0 ) {  //else if clause added by Pablo on 07/2014
+				tokens.pop_front();
+				output_position = bool(atoi(tokens.front().c_str()));
 		}
 		// ignore the remainder of the line
 		getline(file, line);
@@ -2666,8 +2679,37 @@ int main(int argc, char *argv[])
 
 #if LOG_TIMING
 	double t0 = Utils::GET_CLOCK();
-#endif // LOG_TIMING
+	
+	//added for MCC USB 3101 by Pablo 7/1/14
+	HIDInterface*  hid = 0x0;
+	__u8 channel;
+	__u16 value;
+	hid_return ret;
+	int idx;
+	int nInterfaces = 0;
 
+	ret=hid_init();
+	if (ret!=HID_RET_SUCCESS) {
+	fprintf(stderr, "hid_init failed with return code %d\n", ret);
+	return -1;
+	}
+	if ((nInterfaces = PMD_Find_Interface(&hid, 0, USB3101_PID)) >= 0) {
+    fprintf(stderr, "USB 3101 Device is found! Number of Interfaces = %d\n", nInterfaces);
+	}
+	
+	/* config mask DIO_DIR_OUT (0x00) means all outputs */
+	usbDConfigPort_USB31XX(hid, DIO_DIR_OUT);
+	usbDOut_USB31XX(hid, 0);
+	
+	// Configure all analog channels for 0-10V output
+	for (idx = 0; idx < 8; idx++) {
+	usbAOutConfig_USB31XX(hid, idx, UP_10_00V);
+	}
+	
+	//^^^Pablo-------------------------------------------
+
+#endif // LOG_TIMING
+	
 	unsigned int nframes = 0;
 	double av_err = 0, av_exec_time = 0, av_loop_time = 0, total_dist = 0;
 	for( unsigned int cnt = 1, seq_n = 1; ; cnt++, seq_n++ ) {
@@ -2907,6 +2949,10 @@ int main(int argc, char *argv[])
 		static double heading = 0;
 		static double intx = 0;
 		static double inty = 0;
+		
+		//w - rel vec world
+		//moved and made "static" by Pablo 07/2014
+		static double w[3] = {0,0,0};
 
 		// save if good
 		if( !bad_frame || !SPHERE_INIT ) {
@@ -2937,8 +2983,6 @@ int main(int argc, char *argv[])
 				first_good_frame = false;
 			}
 
-			// w - rel vec world
-			double w[3] = {0,0,0};
 			Maths::MAT_MUL_VEC(Rw, r, w);
 
 			// Rc - abs mat cam (corrected for initial orientation)
@@ -3159,11 +3203,12 @@ int main(int argc, char *argv[])
 			clfs << cnt << ", " << intx << ", " << inty << ", " << heading << ", " << cnt << endl;
 		}
 
+		// Serial Out modified by Pablo for MCC USB 3101  7/1/14 
 		if( do_serial_out ) {
 //			static char out[8] = {0,0,0,0,0,0,0,0};
 //			int velx_int = Maths::CLAMP((int)round(65535.0*(velx/nlopt_res+1)/2.0), 0, 65535);		// [-0.5,0.5] -> [0,65535]
 //			int vely_int = Maths::CLAMP((int)round(65535.0*(vely/nlopt_res+1)/2.0), 0, 65535);		// [-0.5,0.5] -> [0,65535]
-//			int heading_int = round(65536*heading/(2*Maths::PI));									// [0,2pi) -> [0,65535]
+//			int heading_int = round(65536*heading/(2*Maths::PI));						// [0,2pi) -> [0,65535]
 //			if( heading_int >= 65536 ) { heading_int -= 65536; }
 //			out[0] = 0x52;
 //			out[1] = (velx_int >> 8) & 0xFF;
@@ -3180,6 +3225,24 @@ int main(int argc, char *argv[])
 
 			if( serial_write(&_serial, &heading_8bit, 1) != 1 ) {
 				fprintf(stderr, "ERROR: Short write to serial (%s)!\n", serial_port.c_str());
+			
+			if (output_position) {
+				int comp0 = round(65536.0*intx/(2*Maths::PI));
+				int comp1 = round(65536.0*heading/(2*Maths::PI));
+				int comp2 = round(65536.0*inty/(2*Maths::PI));		
+					
+				usbAOut_USB31XX(hid, 0, (__u16) comp0, 0);
+				usbAOut_USB31XX(hid, 2, (__u16) comp2, 0);
+				usbAOut_USB31XX(hid, 1, (__u16) comp1, 0);
+			}
+			else {
+				int comp0 = Maths::CLAMP((int)round(65535.0*(vely/nlopt_res+1)/2.0), 0, 65535);
+				int comp1 = Maths::CLAMP((int)round(65535.0*(w[2]/nlopt_res+1)/2.0), 0, 65535);
+				int comp2 = Maths::CLAMP((int)round(65535.0*(vely/nlopt_res+1)/2.0), 0, 65535);
+
+				usbAOut_USB31XX(hid, 0, (__u16) comp0, 0);
+				usbAOut_USB31XX(hid, 1, (__u16) comp1, 0);
+				usbAOut_USB31XX(hid, 2, (__u16) comp2, 0);
 			}
 		}
 
