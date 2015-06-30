@@ -1433,6 +1433,7 @@ int main(int argc, char *argv[])
 			} else if( tokens.front().compare("output_position") == 0 ) {  //else if clause added by Pablo on 07/2014
 				tokens.pop_front();
 				output_position = bool(atoi(tokens.front().c_str()));
+			}
 		}
 		// ignore the remainder of the line
 		getline(file, line);
@@ -2709,7 +2710,7 @@ int main(int argc, char *argv[])
 	//^^^Pablo-------------------------------------------
 
 #endif // LOG_TIMING
-	
+
 	unsigned int nframes = 0;
 	double av_err = 0, av_exec_time = 0, av_loop_time = 0, total_dist = 0;
 	for( unsigned int cnt = 1, seq_n = 1; ; cnt++, seq_n++ ) {
@@ -3225,6 +3226,7 @@ int main(int argc, char *argv[])
 
 			if( serial_write(&_serial, &heading_8bit, 1) != 1 ) {
 				fprintf(stderr, "ERROR: Short write to serial (%s)!\n", serial_port.c_str());
+			}
 			
 			if (output_position) {
 				int comp0 = round(65536.0*intx/(2*Maths::PI));
