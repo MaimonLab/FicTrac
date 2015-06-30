@@ -63,5 +63,5 @@ $(EXECUTABLE): $(OBJECTSF)
 .cpp.o:
 	$(CC2) $(CFLAGSF) $< -o $@
 
-clean: ; rm -f $(DEPENDS) $(OBJECTS) $(EXECUTABLE)
+clean: ; rm -f $(DEPENDS) $(OBJECTSF) $(EXECUTABLE)
 
