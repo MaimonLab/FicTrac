@@ -1279,6 +1279,10 @@ int main(int argc, char *argv[])
 	int serial_baud = 115200;
 	string serial_port = "/dev/ttyS0";
 
+    // VR variables
+    double vr_post_x = 0;
+    double vr_post_y = 0;
+
 	// read in config file
 	if( argc <= 1 ) {
 		printf("Input config file required (invocation: ./fictrac /path/to/config.txt)!\n");
@@ -1433,7 +1437,14 @@ int main(int argc, char *argv[])
 			} else if( tokens.front().compare("output_position") == 0 ) {  //else if clause added by Pablo on 07/2014
 				tokens.pop_front();
 				output_position = bool(atoi(tokens.front().c_str()));
-			}
+			} else if( tokens.front().compare("vr_post_x") == 0 ) {
+                tokens.pop_front();
+                vr_post_x = atof(tokens.front().c_str());
+            } else if( tokens.front().compare("vr_post_y") == 0 ) {
+                tokens.pop_front();
+                vr_post_y = atof(tokens.front().c_str());
+            }
+
 		}
 		// ignore the remainder of the line
 		getline(file, line);
@@ -1539,6 +1550,8 @@ int main(int argc, char *argv[])
 			sphere_orient[0], sphere_orient[1], sphere_orient[2]);
 	printf("bayer_type:.  .  .  %d\n", bayer_type);
 	printf("force_draw_config:  %d\n", force_draw_config);
+    printf("vr_post_x:.   .  .  %f\n", vr_post_x);
+    printf("vr_post_y:.   .  .  %f\n", vr_post_y);
 	printf("\n");
 
 	fflush(stdout);
@@ -2681,33 +2694,33 @@ int main(int argc, char *argv[])
 #if LOG_TIMING
 	double t0 = Utils::GET_CLOCK();
 	
-	//added for MCC USB 3101 by Pablo 7/1/14
-	HIDInterface*  hid = 0x0;
-	__u8 channel;
-	__u16 value;
-	hid_return ret;
-	int idx;
-	int nInterfaces = 0;
-
-	ret=hid_init();
-	if (ret!=HID_RET_SUCCESS) {
-	fprintf(stderr, "hid_init failed with return code %d\n", ret);
-	return -1;
-	}
-	if ((nInterfaces = PMD_Find_Interface(&hid, 0, USB3101_PID)) >= 0) {
-    fprintf(stderr, "USB 3101 Device is found! Number of Interfaces = %d\n", nInterfaces);
-	}
-	
-	/* config mask DIO_DIR_OUT (0x00) means all outputs */
-	usbDConfigPort_USB31XX(hid, DIO_DIR_OUT);
-	usbDOut_USB31XX(hid, 0);
-	
-	// Configure all analog channels for 0-10V output
-	for (idx = 0; idx < 8; idx++) {
-	usbAOutConfig_USB31XX(hid, idx, UP_10_00V);
-	}
-	
-	//^^^Pablo-------------------------------------------
+//	//added for MCC USB 3101 by Pablo 7/1/14
+//	HIDInterface*  hid = 0x0; jh comment out
+//	__u8 channel;
+//	__u16 value;
+//	hid_return ret;
+//	int idx;
+//	int nInterfaces = 0;
+//
+//	ret=hid_init();
+//	if (ret!=HID_RET_SUCCESS) {
+//	fprintf(stderr, "hid_init failed with return code %d\n", ret);
+//	return -1;
+//	}
+//	if ((nInterfaces = PMD_Find_Interface(&hid, 0, USB3101_PID)) >= 0) {
+//    fprintf(stderr, "USB 3101 Device is found! Number of Interfaces = %d\n", nInterfaces);
+//	}
+//	
+//	/* config mask DIO_DIR_OUT (0x00) means all outputs */
+//	usbDConfigPort_USB31XX(hid, DIO_DIR_OUT);
+//	usbDOut_USB31XX(hid, 0);
+//	
+//	// Configure all analog channels for 0-10V output
+//	for (idx = 0; idx < 8; idx++) {
+//	usbAOutConfig_USB31XX(hid, idx, UP_10_00V);
+//	}
+//	
+//	//^^^Pablo-------------------------------------------
 
 #endif // LOG_TIMING
 
@@ -3233,18 +3246,18 @@ int main(int argc, char *argv[])
 				int comp1 = round(65536.0*heading/(2*Maths::PI));
 				int comp2 = round(65536.0*inty/(2*Maths::PI));		
 					
-				usbAOut_USB31XX(hid, 0, (__u16) comp0, 0);
-				usbAOut_USB31XX(hid, 2, (__u16) comp2, 0);
-				usbAOut_USB31XX(hid, 1, (__u16) comp1, 0);
+//				usbAOut_USB31XX(hid, 0, (__u16) comp0, 0); jh commentout
+//				usbAOut_USB31XX(hid, 2, (__u16) comp2, 0);
+//				usbAOut_USB31XX(hid, 1, (__u16) comp1, 0);
 			}
 			else {
 				int comp0 = Maths::CLAMP((int)round(65535.0*(vely/nlopt_res+1)/2.0), 0, 65535);
 				int comp1 = Maths::CLAMP((int)round(65535.0*(w[2]/nlopt_res+1)/2.0), 0, 65535);
 				int comp2 = Maths::CLAMP((int)round(65535.0*(vely/nlopt_res+1)/2.0), 0, 65535);
 
-				usbAOut_USB31XX(hid, 0, (__u16) comp0, 0);
-				usbAOut_USB31XX(hid, 1, (__u16) comp1, 0);
-				usbAOut_USB31XX(hid, 2, (__u16) comp2, 0);
+//				usbAOut_USB31XX(hid, 0, (__u16) comp0, 0);jh comment out
+//				usbAOut_USB31XX(hid, 1, (__u16) comp1, 0);
+//				usbAOut_USB31XX(hid, 2, (__u16) comp2, 0);
 			}
 		}
 
