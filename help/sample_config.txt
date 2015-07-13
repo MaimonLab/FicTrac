@@ -1,18 +1,19 @@
 output_fn ./outputdatatest.dat
-mask_fn ./mask.jpg
+mask_fn ./help/mask.jpg
 load_template 0
 cam_input 1
 do_search 0
 quality_factor 5
 use_ball_colour 0
 error_thresh 1e4
-thresh_win 15
+thresh_win 0.15
 do_config 0
 save_video 0
 thresh_ratio 1.6
 vfov 5.23
-fps 1
+fps 30
 do_serial_out 1
 do_display 1
 output_position 1
- 
+vr_post_x 5.5
+vr_post_y 4.3
