@@ -52,6 +52,7 @@ SHARED_PTR(CameraRemap);
 //these two files and its headers/pointers were added to Fictrac's folder
 //---------------------------------
 
+#define ENABLE_VOLTAGE_OUT 0  //set to 0 if running without HID devices (ie MCC 3101)
 #define EXTRA_DEBUG_WINDOWS 0
 #define LOG_TIMING 1
 
@@ -2681,6 +2682,7 @@ int main(int argc, char *argv[])
 #if LOG_TIMING
 	double t0 = Utils::GET_CLOCK();
 	
+#if ENABLE_VOLTAGE_OUT
 	//added for MCC USB 3101 by Pablo 7/1/14
 	HIDInterface*  hid = 0x0;
 	__u8 channel;
@@ -2708,6 +2710,7 @@ int main(int argc, char *argv[])
 	}
 	
 	//^^^Pablo-------------------------------------------
+#endif /* ENABLE_VOLTAGE_OUT */
 
 #endif // LOG_TIMING
 
@@ -3233,18 +3236,22 @@ int main(int argc, char *argv[])
 				int comp1 = round(65536.0*heading/(2*Maths::PI));
 				int comp2 = round(65536.0*inty/(2*Maths::PI));		
 					
+                #if ENABLE_VOLTAGE_OUT
 				usbAOut_USB31XX(hid, 0, (__u16) comp0, 0);
 				usbAOut_USB31XX(hid, 2, (__u16) comp2, 0);
 				usbAOut_USB31XX(hid, 1, (__u16) comp1, 0);
+                #endif /* ENABLE_VOLTAGE_OUT */
 			}
 			else {
 				int comp0 = Maths::CLAMP((int)round(65535.0*(vely/nlopt_res+1)/2.0), 0, 65535);
 				int comp1 = Maths::CLAMP((int)round(65535.0*(w[2]/nlopt_res+1)/2.0), 0, 65535);
 				int comp2 = Maths::CLAMP((int)round(65535.0*(vely/nlopt_res+1)/2.0), 0, 65535);
 
+                #if ENABLE_VOLTAGE_OUT
 				usbAOut_USB31XX(hid, 0, (__u16) comp0, 0);
 				usbAOut_USB31XX(hid, 1, (__u16) comp1, 0);
 				usbAOut_USB31XX(hid, 2, (__u16) comp2, 0);
+                #endif /* ENABLE_VOLTAGE_OUT */
 			}
 		}
 
