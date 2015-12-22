@@ -52,7 +52,7 @@ SHARED_PTR(CameraRemap);
 //these two files and its headers/pointers were added to Fictrac's folder
 //---------------------------------
 
-#define ENABLE_VOLTAGE_OUT 0  //set to 0 if running without HID devices (ie MCC 3101)
+#define ENABLE_VOLTAGE_OUT 1  //set to 0 if running without HID devices (ie MCC 3101)
 #define EXTRA_DEBUG_WINDOWS 0
 #define LOG_TIMING 1
 
