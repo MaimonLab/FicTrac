@@ -1032,7 +1032,7 @@ void* grabInputFrames(void* obj)
 	return NULL;
 }
 
-bool getInputFrames(boost::shared_ptr<s_input> input, Mat& frame, Mat& remap, double& timestamp)
+bool getInputFrames(boost::shared_ptr<s_input> input, Mat& frame, Mat& remap, double& timestamp, unsigned int& nframes_skipped)
 {
 	pthread_mutex_lock(&input->mutex);
 	while( ACTIVE && input->frame_q.empty() ) {
@@ -1042,6 +1042,17 @@ bool getInputFrames(boost::shared_ptr<s_input> input, Mat& frame, Mat& remap, do
 		pthread_mutex_unlock(&input->mutex);
 		return false;
 	}
+
+    //If we have more than one element in the "new data" queue
+    //toss everything until we're on the most current data point
+    while(input->frame_q.size()>1){
+        input->frame_q.pop_front();
+        input->remap_q.pop_front();
+        input->timestamp_q.pop_front();
+
+        nframes_skipped++;
+    }
+
 	frame = input->frame_q.front();
 	remap = input->remap_q.front();
 	timestamp = input->timestamp_q.front();
@@ -2715,12 +2726,14 @@ int main(int argc, char *argv[])
 #endif // LOG_TIMING
 
 	unsigned int nframes = 0;
+    unsigned int nframes_skipped = 0;
 	double av_err = 0, av_exec_time = 0, av_loop_time = 0, total_dist = 0;
 	for( unsigned int cnt = 1, seq_n = 1; ; cnt++, seq_n++ ) {
 
 		nframes++;
 
 		printf("\ndoing frame %d\n", cnt);
+        printf("nframes skipped:  %d\n", nframes_skipped);
 
 		double t1 = Utils::GET_CLOCK();
 
@@ -2730,7 +2743,7 @@ int main(int argc, char *argv[])
 		Mat frame_bgr, remap;
 		bool grab_error = false;
 		for( unsigned int i = 0; i < frame_step; i++ ) {
-			if( !getInputFrames(input, frame_bgr, remap, timestamp) ) {
+			if( !getInputFrames(input, frame_bgr, remap, timestamp, nframes_skipped) ) {
 				fprintf(stderr, "ERROR: No more frames!\n");
 				fflush(stdout);
 				grab_error = true;
