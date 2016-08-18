@@ -42,6 +42,8 @@ SHARED_PTR(CameraRemap);
 #include <netinet/in.h>
 #include <signal.h>
 
+#include "fmfwrapper.h"
+
 //added by Pablo for MCC USB 3101 6/30/14
 #include <fcntl.h>
 #include <ctype.h>
