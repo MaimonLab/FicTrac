@@ -2681,9 +2681,9 @@ int main(int argc, char *argv[])
 	}
 
     // set up the fmf saving functionality
+    fmfwrapper fmf;  //create an fmf object
     if( fmf_save.compare("") != 0 ) {
         try{
-            fmfwrapper fmf;  //create an fmf object
             fmf.fmfopen(fmf_save);
         }catch(const std::exception &e){
             std::cout << "C++ exception in fmfwrapper:  " << e.what() << std::endl;
@@ -3671,6 +3671,15 @@ int main(int argc, char *argv[])
 				cvtColor(draw, draw, CV_BGR2RGB);
 				writer->enqueue_frame(draw);
 			}
+
+            // Add a frame to the fmf movie
+            if( fmf_save.compare("") != 0 ) {
+                try{
+                    fmf.add_frame(draw, Utils::GET_CLOCK());
+                }catch(const std::exception &e){
+                    std::cout << "C++ exception in fmfwrapper:  " << e.what() << std::endl;
+                }
+            }
 
 			prev_remap = remap;
 		}
