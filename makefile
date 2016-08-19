@@ -6,10 +6,11 @@
 #Declarations for fmfwrapper
 FMF_SOURCES = ./fmfwrapper/handle_error.cpp \
               ./fmfwrapper/pyboostcvconverter.cpp \
-              ./fmfwrapper/fmfwrapper.cpp
-FMF_OBJS = handle_error.o fmfwrapper.o pyboostcvconverter.o
-BOOST_PYTHON_LIB = "/usr/local/lib/libboost_python.a"
+			  ./fmfwrapper/fmfwrapper.cpp
+BOOST_PYTHON_LIB = /usr/local/lib/libboost_python.a
 FMF_INC_DIRS = -I"/usr/local/include" -I"/usr/include/python2.7" -I"./fmfwrapper"
+FMF_OBJS=$(FMF_SOURCES:.cpp=.o)
+FMF_DEPENDS=$(FMF_SOURCES:.cpp=.d)
 
 #Declarations for mcclibhid
 CC=gcc
@@ -47,7 +48,6 @@ SOURCESF=FicTrac.cpp \
     ./library/VsDraw.cpp 
 
 
-
 #MAKE RULES
 
 all: $(SOURCES) $(EXECUTABLE)
@@ -65,14 +65,11 @@ libmcchid.a: $(OBJECTSM)
 	ar -r libmcchid.a $(OBJECTSM)
 	ranlib libmcchid.a
 
-fmfwrapper.o: $(FMF_OBJS) $(BOOST_PYTHON_LIB) 
-	$(CC2) $(CFLAGSF) $< -o $@ 
+$(EXECUTABLE): $(OBJECTSF) $(FMF_OBJS) $(BOOST_PYTHON_LIB)
+	$(CC2) -o $@ $(OBJECTSF) $(FMF_OBJS) $(BOOST_PYTHON_LIB) $(LDFLAGS) $(LDLIBS) -g -Wall -I. -lmcchid -L. -lm -L/usr/local/lib -lhid -lusb 
 
-$(EXECUTABLE): $(OBJECTSF)
-	$(CC2) -o $@ $(OBJECTSF) $(LDFLAGS) $(LDLIBS) -g -Wall -I. -lmcchid -L. -lm -L/usr/local/lib -lhid -lusb 
-
-.cpp.o:
+.cpp.o: 
 	$(CC2) $(CFLAGSF) $< -o $@
 
-clean: ; rm -f $(DEPENDS) $(OBJECTSF) $(FMF_OBJS) $(EXECUTABLE)
+clean: ; rm -f $(DEPENDS) $(OBJECTSF) $(FMF_OBJS) $(FMF_DEPENDS) $(EXECUTABLE)
 
