@@ -15,4 +15,5 @@ fps 50
 do_serial_out 1
 do_display 1
 output_position 1
+fmf_save ./testfmfmovie.fmf
  

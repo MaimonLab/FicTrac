@@ -1272,7 +1272,7 @@ int main(int argc, char *argv[])
 	BAYER_TYPE bayer_type = BAYER_NONE;
 	double sphere_orient[3] = {0,0,0};
 	bool force_draw_config = false;
-    string fmf_save = "";
+    	string fmf_save = "";
 
 	enum CAM_MODEL_TYPE m_cam_model = RECTILINEAR;
 
@@ -1511,7 +1511,7 @@ int main(int argc, char *argv[])
 	printf("closed_loop_fn:  .  '%s'\n", closed_loop_fn.c_str());
 	printf("debug_video_fn:  .  '%s'\n", debug_video_fn.c_str());
 	printf("frames_video_fn: .  '%s'\n", frames_video_fn.c_str());
-    printf("fmf_save: .   .  .  '%s'\n", fmf_save.c_str());
+    	printf("fmf_save: .   .  .  '%s'\n", fmf_save.c_str());
 	printf("frame_skip:.  .  .  %d\n", frame_skip);
 	printf("frame_step:.  .  .  %d\n", frame_step);
 	printf("do_display:.  .  .  %d\n", do_display);
