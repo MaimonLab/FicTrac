@@ -3675,7 +3675,13 @@ int main(int argc, char *argv[])
             // Add a frame to the fmf movie
             if( fmf_save.compare("") != 0 ) {
                 try{
-                    fmf.add_frame(draw, Utils::GET_CLOCK());
+                    //cvtColor(draw, draw, CV_BGR2RGB);
+                    //Mat channel[3];
+                    //split(draw, channel);
+                    //fmf.add_frame(channel[0], Utils::GET_CLOCK());
+		    Mat channel;
+                    cvtColor(draw, channel, CV_BGR2GRAY);
+		    fmf.add_frame(channel, Utils::GET_CLOCK());
                 }catch(const std::exception &e){
                     std::cout << "C++ exception in fmfwrapper:  " << e.what() << std::endl;
                 }
