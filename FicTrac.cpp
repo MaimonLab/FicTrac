@@ -2681,10 +2681,10 @@ int main(int argc, char *argv[])
 	}
 
     // set up the fmf saving functionality
-    fmfwrapper fmf;  //create an fmf object
+    fmfwrapper fmf;  //create an empty fmf wrapper object (placed here to avoid scoping issues)
     if( fmf_save.compare("") != 0 ) {
         try{
-            fmf.fmfopen(fmf_save);
+            fmf.fmfopen(fmf_save);  //create the actual fmf saver python object
         }catch(const std::exception &e){
             std::cout << "C++ exception in fmfwrapper:  " << e.what() << std::endl;
         }
@@ -3675,13 +3675,15 @@ int main(int argc, char *argv[])
             // Add a frame to the fmf movie
             if( fmf_save.compare("") != 0 ) {
                 try{
-                    //cvtColor(draw, draw, CV_BGR2RGB);
-                    //Mat channel[3];
-                    //split(draw, channel);
-                    //fmf.add_frame(channel[0], Utils::GET_CLOCK());
-		    Mat channel;
-                    cvtColor(draw, channel, CV_BGR2GRAY);
-		    fmf.add_frame(channel, Utils::GET_CLOCK());
+		    //To save a black and white image
+		    //Mat channel;
+                    //cvtColor(draw, channel, CV_BGR2GRAY);
+		    //fmf.add_frame(channel, Utils::GET_CLOCK());
+
+		    //To save a color image
+		    cvtColor(draw, draw, CV_BGR2RGB);
+		    fmf.add_frame(draw, Utils::GET_CLOCK());
+
                 }catch(const std::exception &e){
                     std::cout << "C++ exception in fmfwrapper:  " << e.what() << std::endl;
                 }
