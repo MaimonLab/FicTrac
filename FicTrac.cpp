@@ -1511,7 +1511,7 @@ int main(int argc, char *argv[])
 	printf("closed_loop_fn:  .  '%s'\n", closed_loop_fn.c_str());
 	printf("debug_video_fn:  .  '%s'\n", debug_video_fn.c_str());
 	printf("frames_video_fn: .  '%s'\n", frames_video_fn.c_str());
-    	printf("fmf_save: .   .  .  '%s'\n", fmf_save.c_str());
+   	printf("fmf_save: .   .  .  '%s'\n", fmf_save.c_str());
 	printf("frame_skip:.  .  .  %d\n", frame_skip);
 	printf("frame_step:.  .  .  %d\n", frame_step);
 	printf("do_display:.  .  .  %d\n", do_display);
@@ -2681,18 +2681,15 @@ int main(int argc, char *argv[])
 	}
 
     // set up the fmf saving functionality
-    fmfwrapper fmf;  //create an empty fmf wrapper object (placed here to avoid scoping issues)
+    //create an empty fmf wrapper object (placed here to avoid scoping issues)
+    boost::shared_ptr<fmfwrapper> fmf = boost::shared_ptr<fmfwrapper>(new fmfwrapper());  
     if( fmf_save.compare("") != 0 ) {
         try{
-            fmf.fmfopen(fmf_save);  //create the actual fmf saver python object
+            fmf->fmfopen(fmf_save);  //create the actual fmf saver python object
         }catch(const std::exception &e){
             std::cout << "C++ exception in fmfwrapper:  " << e.what() << std::endl;
         }
     }
-
-	///
-	/// PROGRAM LOOP
-	///
 
 	fflush(stdout);
 
@@ -2733,6 +2730,11 @@ int main(int argc, char *argv[])
 
 	unsigned int nframes = 0;
 	double av_err = 0, av_exec_time = 0, av_loop_time = 0, total_dist = 0;
+
+	///
+	/// PROGRAM LOOP
+	///
+
 	for( unsigned int cnt = 1, seq_n = 1; ; cnt++, seq_n++ ) {
 
 		nframes++;
@@ -3675,14 +3677,14 @@ int main(int argc, char *argv[])
             // Add a frame to the fmf movie
             if( fmf_save.compare("") != 0 ) {
                 try{
-		    //To save a black and white image
-		    //Mat channel;
+                    //To save a black and white image
+                    //Mat channel;
                     //cvtColor(draw, channel, CV_BGR2GRAY);
-		    //fmf.add_frame(channel, Utils::GET_CLOCK());
-
-		    //To save a color image
-		    cvtColor(draw, draw, CV_BGR2RGB);
-		    fmf.add_frame(draw, Utils::GET_CLOCK());
+                    //fmf->enqueue_frame(channel, Utils::GET_CLOCK());
+                    
+                    //To save a color image
+                    cvtColor(draw, draw, CV_BGR2RGB);
+                    fmf->enqueue_frame(draw, Utils::GET_CLOCK());
 
                 }catch(const std::exception &e){
                     std::cout << "C++ exception in fmfwrapper:  " << e.what() << std::endl;
