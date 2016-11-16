@@ -3677,14 +3677,27 @@ int main(int argc, char *argv[])
             // Add a frame to the fmf movie
             if( fmf_save.compare("") != 0 ) {
                 try{
-                    //To save a black and white image
+                    //To save the full black and white image
                     //Mat channel;
                     //cvtColor(draw, channel, CV_BGR2GRAY);
                     //fmf->enqueue_frame(channel, Utils::GET_CLOCK());
                     
-                    //To save a color image
+                    //To save the full color image
                     cvtColor(draw, draw, CV_BGR2RGB);
                     fmf->enqueue_frame(draw, Utils::GET_CLOCK());
+                    
+                    //To save subregions follow a similar pattern
+                    //For black and white:
+                    //
+                    //Mat channel;
+                    //cvtColor(draw, channel, CV_BGR2GRAY);
+                    //Mat subMat = channel(Rect(36, 10, 252, 200));
+                    //fmf->enqueue(submat, Utils::GET_CLOCK());
+                    //
+                    //For color:
+                    //cvtColor(draw, draw, CV_BGR2RGB);
+                    //Mat submat = draw(Rect(36, 10, 252, 200));
+                    //fmf->enqueue(submat, Utils::GET_CLOCK());
 
                 }catch(const std::exception &e){
                     std::cout << "C++ exception in fmfwrapper:  " << e.what() << std::endl;
