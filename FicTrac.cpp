@@ -3691,13 +3691,13 @@ int main(int argc, char *argv[])
                     //
                     //Mat channel;
                     //cvtColor(draw, channel, CV_BGR2GRAY);
-                    //Mat subMat = channel(Rect(36, 10, 252, 200));
-                    //fmf->enqueue(submat, Utils::GET_CLOCK());
+                    //Mat submat = channel(Rect(36, 10, 252, 200));
+                    //fmf->enqueue_frame(submat, Utils::GET_CLOCK());
                     //
                     //For color:
                     //cvtColor(draw, draw, CV_BGR2RGB);
                     //Mat submat = draw(Rect(36, 10, 252, 200));
-                    //fmf->enqueue(submat, Utils::GET_CLOCK());
+                    //fmf->enqueue_frame(submat, Utils::GET_CLOCK());
 
                 }catch(const std::exception &e){
                     std::cout << "C++ exception in fmfwrapper:  " << e.what() << std::endl;
