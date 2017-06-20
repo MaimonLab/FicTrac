@@ -21,6 +21,7 @@ SHARED_PTR(CameraRemap);
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgcodecs.hpp>
 
 #include <boost/shared_ptr.hpp>
 #include <boost/shared_array.hpp>
@@ -42,17 +43,17 @@ SHARED_PTR(CameraRemap);
 #include <netinet/in.h>
 #include <signal.h>
 
-//added by Pablo for MCC USB 3101 6/30/14
+// Added for MCC use
 #include <fcntl.h>
 #include <ctype.h>
 #include <asm/types.h>
 
+#include "hidapi.h"
 #include "pmd.h"
 #include "usb-3100.h"
-//these two files and its headers/pointers were added to Fictrac's folder
 //---------------------------------
 
-#define ENABLE_VOLTAGE_OUT 1  //set to 0 if running without HID devices (ie MCC 3101)
+#define ENABLE_VOLTAGE_OUT 0  //set to 0 if running without HID devices (ie MCC 3101)
 #define EXTRA_DEBUG_WINDOWS 0
 #define LOG_TIMING 1
 
@@ -1576,6 +1577,7 @@ int main(int argc, char *argv[])
 		fflush(stderr);
 		exit(-1);
 	}
+
 	int width = cap->getWidth();
 	int height = cap->getHeight();
 
@@ -2683,21 +2685,18 @@ int main(int argc, char *argv[])
 	double t0 = Utils::GET_CLOCK();
 	
 #if ENABLE_VOLTAGE_OUT
-	//added for MCC USB 3101 by Pablo 7/1/14
-	HIDInterface*  hid = 0x0;
-	__u8 channel;
-	__u16 value;
-	hid_return ret;
+	//added for MCC USB 3101
+	hid_device*  hid = 0x0;
+	int ret;
 	int idx;
-	int nInterfaces = 0;
 
 	ret=hid_init();
-	if (ret!=HID_RET_SUCCESS) {
+	if (ret< 0) {
 	fprintf(stderr, "hid_init failed with return code %d\n", ret);
 	return -1;
 	}
-	if ((nInterfaces = PMD_Find_Interface(&hid, 0, USB3101_PID)) >= 0) {
-    fprintf(stderr, "USB 3101 Device is found! Number of Interfaces = %d\n", nInterfaces);
+	if ((hid = hid_open(MCC_VID, USB3101_PID, NULL)) > 0) {
+    fprintf(stderr, "USB 3101 Device is found!");
 	}
 	
 	/* config mask DIO_DIR_OUT (0x00) means all outputs */
@@ -2706,10 +2705,9 @@ int main(int argc, char *argv[])
 	
 	// Configure all analog channels for 0-10V output
 	for (idx = 0; idx < 8; idx++) {
-	usbAOutConfig_USB31XX(hid, idx, UP_10_00V);
+	    usbAOutConfig_USB31XX(hid, idx, UP_10_00V);
 	}
 	
-	//^^^Pablo-------------------------------------------
 #endif /* ENABLE_VOLTAGE_OUT */
 
 #endif // LOG_TIMING
