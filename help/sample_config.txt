@@ -7,11 +7,11 @@ quality_factor 5
 use_ball_colour 0
 error_thresh 1e4
 thresh_win 0.15
-do_config 0
+do_config 1
 save_video 0
 thresh_ratio 1.6
 vfov 5.23
-fps 50
+fps -1
 do_serial_out 1
 do_display 1
 output_position 1

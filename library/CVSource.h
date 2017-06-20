@@ -11,8 +11,11 @@
 #include "ImgSource.h"
 
 #include <opencv2/opencv.hpp>
+#include <opencv2/videoio.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <boost/shared_ptr.hpp>
+
+using cv::Mat;
 
 class CVSource : public ImgSource {
 public:

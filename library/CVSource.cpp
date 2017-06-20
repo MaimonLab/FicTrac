@@ -10,12 +10,28 @@
 CVSource::CVSource(int index)
 {
 	printf("%s: looking for camera at index %d...\n", __func__, index);
-	_cap = boost::shared_ptr<cv::VideoCapture>(new cv::VideoCapture(index));
+	_cap = boost::shared_ptr<cv::VideoCapture>(new cv::VideoCapture(index + cv::CAP_DC1394));
+    _cap->set(CV_CAP_PROP_FPS, -1); 
 	_open = _cap->isOpened();
 
 	if( _open ) {
-		_width = _cap->get(CV_CAP_PROP_FRAME_WIDTH);
-		_height = _cap->get(CV_CAP_PROP_FRAME_HEIGHT);
+        Mat init_frame;
+        if( !CVSource::grab(init_frame) ) {
+            fprintf(stderr, "ERROR:%s: grabbing camera init_frame!\n", __func__);
+            fflush(stderr);
+            exit(-1);
+        }
+        //manually setting the size appears to fail...
+        //_cap->set(cv::CAP_PROP_FRAME_WIDTH, init_frame.cols);
+        //_cap->set(cv::CAP_PROP_FRAME_HEIGHT, init_frame.rows);
+
+        //original, always returns 640x480...
+		//_width = _cap->get(cv::CAP_PROP_FRAME_WIDTH);
+		//_height = _cap->get(cv::CAP_PROP_FRAME_HEIGHT);
+
+        //set width and height from size of image returned
+        _width = init_frame.cols;
+        _height = init_frame.rows;
 	}
 }
 
