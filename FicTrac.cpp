@@ -53,7 +53,7 @@ SHARED_PTR(CameraRemap);
 #include "usb-3100.h"
 //---------------------------------
 
-#define ENABLE_VOLTAGE_OUT 0  //set to 0 if running without HID devices (ie MCC 3101)
+#define ENABLE_VOLTAGE_OUT 1  //set to 0 if running without HID devices (ie MCC 3101)
 #define EXTRA_DEBUG_WINDOWS 0
 #define LOG_TIMING 1
 
@@ -1717,7 +1717,7 @@ int main(int argc, char *argv[])
 				{
 					uint16_t key = waitKey(50);
 					switch( key ) {
-						case 0xFF51:
+						case 0x51:
 							sphere_cx -= 0.1;
 							cam_model->pixelIndexToVector(sphere_cx, sphere_cy, sphere_centre);
 							Maths::NORMALISE_VEC(sphere_centre);
@@ -1732,7 +1732,7 @@ int main(int argc, char *argv[])
 								vsdraw->display("FicTrac-config");
 							}
 							break;
-						case 0xFF52:
+						case 0x52:
 							sphere_cy -= 0.1;
 							cam_model->pixelIndexToVector(sphere_cx, sphere_cy, sphere_centre);
 							Maths::NORMALISE_VEC(sphere_centre);
@@ -1747,7 +1747,7 @@ int main(int argc, char *argv[])
 								vsdraw->display("FicTrac-config");
 							}
 							break;
-						case 0xFF53:
+						case 0x53:
 							sphere_cx += 0.1;
 							cam_model->pixelIndexToVector(sphere_cx, sphere_cy, sphere_centre);
 							Maths::NORMALISE_VEC(sphere_centre);
@@ -1762,7 +1762,7 @@ int main(int argc, char *argv[])
 								vsdraw->display("FicTrac-config");
 							}
 							break;
-						case 0xFF54:
+						case 0x54:
 							sphere_cy += 0.1;
 							cam_model->pixelIndexToVector(sphere_cx, sphere_cy, sphere_centre);
 							Maths::NORMALISE_VEC(sphere_centre);
