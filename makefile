@@ -9,7 +9,7 @@ CFLAGS= -g -Wall -fPIC -O
 
 #Declarations for FicTrac
 CC2=g++
-CFLAGSF=-D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -Wall -g -c -fmessage-length=0 -std=c++0x -Wno-unused-function `pkg-config --cflags cairomm-1.0` -MMD
+CFLAGSF=-DPGR_CAMERA -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -Wall -g -c -O3 -fmessage-length=0 -std=c++0x -Wno-unused-function `pkg-config --cflags cairomm-1.0` -MMD
 # used to have cflagsf -O3
 LDFLAGS=-g -Wall 
 
