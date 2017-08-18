@@ -203,15 +203,15 @@ void makeSphereRotMaps(CameraModelPtr cam_model,
 			if( quad < 0 ) {
 				mapx[it] = -1;
 				mapy[it] = -1;
-//				mask.data[it] = 0;
+			    //mask.data[it] = 0;
 				continue;
 			}
 
 			// get point on surface of sphere (camera coords)
 			//FIXME: always choses point on front surface of sphere!!
-//			double u1 = (-b+sqrt(quad))/(2.0*a);
+			//double u1 = (-b+sqrt(quad))/(2.0*a);
 			double u2 = (-b-sqrt(quad))/(2.0*a);
-//			double u = std::min(u1,u2);
+			//double u = std::min(u1,u2);
 			double p1[3] = {l[0]*u2, l[1]*u2, l[2]*u2};
 
 			// switch to sphere coords
@@ -227,7 +227,7 @@ void makeSphereRotMaps(CameraModelPtr cam_model,
 			if( Maths::DOT_VEC(p2s, sc) > 0 ) {
 				mapx[it] = -1;
 				mapy[it] = -1;
-//				mask.data[it] = 128;
+				//mask.data[it] = 128;
 				continue;
 			}
 
@@ -240,7 +240,7 @@ void makeSphereRotMaps(CameraModelPtr cam_model,
 
 			mapx[it] = float(x2);
 			mapy[it] = float(y2);
-//			mask.data[it] = 255;
+			//mask.data[it] = 255;
 		}
 	}
 }
@@ -353,8 +353,8 @@ public:
 			}
 		}
 
-//		memcpy(_roi_rot_mat, roi_rot_mat, 9*sizeof(double));
-//		Maths::MAKE_IDENTITY_MAT(_roi_rot_mat);
+		//memcpy(_roi_rot_mat, roi_rot_mat, 9*sizeof(double));
+		//Maths::MAKE_IDENTITY_MAT(_roi_rot_mat);
 	}
 
 	void setImage(Mat input)
@@ -374,7 +374,7 @@ public:
 		Maths::ANGLE_AXIS_TO_MAT(angleAxis, _tmpR1);	// relative rotation in camera frame
 		Maths::MUL_MAT(_R, _tmpR1, _tmpR2);				// absolute orientation in camera frame
 		memcpy(_R, _tmpR2, 9*sizeof(double));			// save absolute orientation
-//		Maths::MUL_MAT(_roi_rot_mat, _R, _tmpR1);		// transpose to ROI coordinate frame
+		//Maths::MUL_MAT(_roi_rot_mat, _R, _tmpR1);		// transpose to ROI coordinate frame
 
 		if( _do_display ) {
 			_orient.setTo(Scalar::all(128));
@@ -440,12 +440,12 @@ public:
 	{
 		Maths::ANGLE_AXIS_TO_MAT(x, _tmpR1);			// relative rotation in camera frame
 		Maths::MUL_MAT(_R, _tmpR1, _testR);				// absolute orientation in camera frame
-//		Maths::MUL_MAT(_roi_rot_mat, _tmpR2, _testR);	// transpose to ROI coordinate frame
+		//Maths::MUL_MAT(_roi_rot_mat, _tmpR2, _testR);	// transpose to ROI coordinate frame
 
-//		printf("%d: testing %6.3f %6.3f %6.3f...",
-//				_nEval, x[0], x[1], x[2]);
+		//printf("%d: testing %6.3f %6.3f %6.3f...",
+		//		_nEval, x[0], x[1], x[2]);
 
-//		_orient.setTo(Scalar::all(128));
+		//_orient.setTo(Scalar::all(128));
 
 		double err = 0;
 		int cnt = 0, good = 0;
@@ -471,7 +471,7 @@ public:
 				err += diff*diff;
 				good++;
 
-//				_orient.data[y*_orient.step+x] = _input.data[i*_input.step+j];
+				//_orient.data[y*_orient.step+x] = _input.data[i*_input.step+j];
 			}
 		}
 
@@ -486,10 +486,10 @@ public:
 			err = DBL_MAX;
 		}
 
-//		printf(" %6.3f\n", diff);
+		//printf(" %6.3f\n", diff);
 
-//		namedWindow("debug-test1");
-//		imshow("debug-test1", _orient);
+		//namedWindow("debug-test1");
+		//imshow("debug-test1", _orient);
 
 		return err;
 	}
@@ -520,7 +520,7 @@ private:
 	double _r;
 
 	double _R[9], _testR[9], _tmpR1[9], _tmpR2[9];
-//	double _roi_rot_mat[9];
+	//double _roi_rot_mat[9];
 
 	Mat _sphere, _weights, _input, _mask, _orient;
 
@@ -630,8 +630,8 @@ public:
 
 	virtual double objective(unsigned n, const double* x, double* grad)
 	{
-//		printf("%d:\tT: %.2f %.2f %.2f  R: %.2f %.2f %.2f  ",
-//				_nEval, x[0], x[1], x[2], x[3], x[4], x[5]);
+		//	printf("%d:\tT: %.2f %.2f %.2f  R: %.2f %.2f %.2f  ",
+		//			_nEval, x[0], x[1], x[2], x[3], x[4], x[5]);
 
 		double tl[3] = {_corners[0].x, _corners[0].y, _corners[0].z};
 		double tr[3] = {_corners[1].x, _corners[1].y, _corners[1].z};
@@ -642,17 +642,17 @@ public:
 		getCornerVecs(x, tl2, tr2, br2, bl2);
 
 		double err = 0;
-//		err += acos(CLAMP(Maths::DOT_VEC(tl, tl2), -1.0, 1.0));
-//		err += acos(CLAMP(Maths::DOT_VEC(tr, tr2), -1.0, 1.0));
-//		err += acos(CLAMP(Maths::DOT_VEC(br, br2), -1.0, 1.0));
-//		err += acos(CLAMP(Maths::DOT_VEC(bl, bl2), -1.0, 1.0));
+		//err += acos(CLAMP(Maths::DOT_VEC(tl, tl2), -1.0, 1.0));
+		//err += acos(CLAMP(Maths::DOT_VEC(tr, tr2), -1.0, 1.0));
+		//err += acos(CLAMP(Maths::DOT_VEC(br, br2), -1.0, 1.0));
+		//err += acos(CLAMP(Maths::DOT_VEC(bl, bl2), -1.0, 1.0));
 
 		err += ((tl[0]-tl2[0])*(tl[0]-tl2[0])+(tl[1]-tl2[1])*(tl[1]-tl2[1])+(tl[2]-tl2[2])*(tl[2]-tl2[2]));
 		err += ((tr[0]-tr2[0])*(tr[0]-tr2[0])+(tr[1]-tr2[1])*(tr[1]-tr2[1])+(tr[2]-tr2[2])*(tr[2]-tr2[2]));
 		err += ((br[0]-br2[0])*(br[0]-br2[0])+(br[1]-br2[1])*(br[1]-br2[1])+(br[2]-br2[2])*(br[2]-br2[2]));
 		err += ((bl[0]-bl2[0])*(bl[0]-bl2[0])+(bl[1]-bl2[1])*(bl[1]-bl2[1])+(bl[2]-bl2[2])*(bl[2]-bl2[2]));
 
-//		printf("(%.2f)\n", err);
+		//printf("(%.2f)\n", err);
 
 		return err;
 	}
@@ -666,20 +666,20 @@ void mouseCallback(int event, int x, int y, int flags, void* param)
 	vector<Point>* click = (vector<Point>*)param;
 
 	switch (event) {
-//	case CV_EVENT_MOUSEMOVE:
-//		break;
+	//case CV_EVENT_MOUSEMOVE:
+	//	break;
 	case CV_EVENT_LBUTTONDOWN:
-//		printf("mouse: %d %d\n", x, y);
+	//	printf("mouse: %d %d\n", x, y);
 		click->push_back(Point(x,y));
 		break;
 	case CV_EVENT_RBUTTONDOWN:
-//		printf("right mouse: %d %d\n", x, y);
+	//	printf("right mouse: %d %d\n", x, y);
 		click->push_back(Point(-1,-1));
-//		pthread_mutex_lock(&_GPSPATH_MUTX);
-//		printf("terminating\n");
-//		_GPSPATH_ACTIVE = false;
-//		pthread_cond_broadcast(&_GPSPATH_COND);
-//		pthread_mutex_unlock(&_GPSPATH_MUTX);
+	//	pthread_mutex_lock(&_GPSPATH_MUTX);
+	//	printf("terminating\n");
+	//	_GPSPATH_ACTIVE = false;
+	//	pthread_cond_broadcast(&_GPSPATH_COND);
+	//	pthread_mutex_unlock(&_GPSPATH_MUTX);
 		break;
 	}
 }
@@ -725,8 +725,8 @@ void* grabInputFrames(void* obj)
 	double thresh_ratio = input->thresh_ratio;
 	int thresh_win = (int)round(input->thresh_win*rwidth) | 0x01;
 	int thresh_rad = (thresh_win-1)/2;
-//	int thresh_max_x = rwidth-thresh_win-1;
-//	int thresh_max_y = rheight-thresh_win-1;
+	//int thresh_max_x = rwidth-thresh_win-1;
+	//int thresh_max_y = rheight-thresh_win-1;
 	Mat thresh_min(rheight, rwidth, CV_8UC1);
 	Mat thresh_max(rheight, rwidth, CV_8UC1);
 
@@ -736,10 +736,10 @@ void* grabInputFrames(void* obj)
 	double fgu = input->fg_yuv.y, fgv = input->fg_yuv.z;
 	double bgu = input->bg_yuv.y, bgv = input->bg_yuv.z;
 
-#if EXTRA_DEBUG_WINDOWS
-	namedWindow("roi", WINDOW_NORMAL);
-	namedWindow("thresh", WINDOW_NORMAL);
-#endif // EXTRA_DEBUG_WINDOWS
+	#if EXTRA_DEBUG_WINDOWS
+		namedWindow("roi", WINDOW_NORMAL);
+		namedWindow("thresh", WINDOW_NORMAL);
+	#endif // EXTRA_DEBUG_WINDOWS
 
 	// rewind to video start
 	if( !input->cam_input ) { input->cap->rewind(); }
@@ -783,15 +783,15 @@ void* grabInputFrames(void* obj)
 		uint8_t win_max_hist[thresh_win];
 		uint8_t win_min_hist[thresh_win];
 
-//		double t1 = Utils::GET_CLOCK();
+		//double t1 = Utils::GET_CLOCK();
 
 		if( use_ball_colour ) {
 			/// Threshold ROI using UV colour space.
 			input->remapper->apply(frame_bgr, remap_bgr);
 
-#if EXTRA_DEBUG_WINDOWS
-			imshow("roi", remap_bgr);
-#endif // EXTRA_DEBUG_WINDOWS
+			#if EXTRA_DEBUG_WINDOWS
+						imshow("roi", remap_bgr);
+			#endif // EXTRA_DEBUG_WINDOWS
 
 			cvtColor(remap_bgr, remap_yuv, CV_BGR2YUV);
 			for( int i = 0; i < rheight; i++ ) {
@@ -816,9 +816,9 @@ void* grabInputFrames(void* obj)
 			cvtColor(frame_bgr, frame_grey, CV_BGR2GRAY);
 			input->remapper->apply(frame_grey, remap_grey);
 
-#if EXTRA_DEBUG_WINDOWS
-			imshow("roi", remap_grey);
-#endif // EXTRA_DEBUG_WINDOWS
+			#if EXTRA_DEBUG_WINDOWS
+						imshow("roi", remap_grey);
+			#endif // EXTRA_DEBUG_WINDOWS
 
 			// pre-processing
 			//blur(remap_grey, remap_blur, Size(3,3), Point(-1,-1), BORDER_REPLICATE);
@@ -827,7 +827,7 @@ void* grabInputFrames(void* obj)
 			thresh_min.setTo(Scalar::all(255));
 			thresh_max.setTo(Scalar::all(0));
 
-#if 1
+			#if 1
 			/** cached min/max **/
 			// pre-fill first col
 			uint8_t max = 0, min = 255;
@@ -896,7 +896,7 @@ void* grabInputFrames(void* obj)
 					if( ++win_it >= thresh_win ) { win_it -= thresh_win; }
 				}
 			}
-#else
+			#else
 			/** naive min/max **/
 			for( int i = 0; i < rheight; i++ ) {
 				uint8_t* pmask = remap_mask.ptr(i);
@@ -941,7 +941,7 @@ void* grabInputFrames(void* obj)
 					}
 				}
 			}
-#endif
+			#endif
 			for( int i = 0; i < rheight; i++ ) {
 				uint8_t* pmask = remap_mask.ptr(i);
 				uint8_t* premap = remap_grey.ptr(i);
@@ -961,57 +961,57 @@ void* grabInputFrames(void* obj)
 			}
 		}
 
-//		double t2 = Utils::GET_CLOCK();
-//		printf("  %s loop time: %.1fms\n", __func__, (t2-t1)*1e3);
+	//double t2 = Utils::GET_CLOCK();
+	//printf("  %s loop time: %.1fms\n", __func__, (t2-t1)*1e3);	
 
-		/// Segmentation.
-//		{
-//			static int hist[256];
-//			memset(hist, 0, 256*sizeof(int));
-//			int cnt = 0;
-//			for( int i = 0; i < rheight; i+=2 ) {
-//				uint8_t* pmask = thresh_mask.ptr(i);
-//				uint8_t* premap = thresh_remap.ptr(i);
-//				for( int j = 0; j < rwidth; j+=2 ) {
-//					if( pmask[j] < 255 ) { continue; }
-//					hist[premap[j]]++;
-//					cnt++;
-//				}
-//			}
-//			int lo_pc = round(0.25*cnt), hi_pc = round(0.75*cnt);
-//			uint8_t lo = 0, hi = 255;
-//			int sum = 0;
-//			for( int i = 0; i < 256; i++ ) {
-//				sum += hist[i];
-//				if( (lo == 0) && (sum >= lo_pc) ) { lo = i; }
-//				if( (hi == 255) && (sum >= hi_pc) ) { hi = i; }
-//			}
-//			for( int i = 0; i < rheight; i++ ) {
-//				uint8_t* pmask = thresh_mask.ptr(i);
-//				uint8_t* premap = thresh_remap.ptr(i);
-//				for( int j = 0; j < rwidth; j++ ) {
-//					if( pmask[j] < 255 ) {
-//						premap[j] = 128;
-//					} else {
-//						premap[j] = Maths::CLAMP((premap[j]+64-lo)*192.0/(hi+64-lo)+0.5, 0.0, 255.0);
-//					}
-//				}
-//			}
-//
-//			int adapt_win = 65;
-//			adapt_win |= 1;
-//			adaptiveThreshold(thresh_remap, thresh_remap, 255,
-//					ADAPTIVE_THRESH_GAUSSIAN_C,
-//					THRESH_BINARY,
-//					adapt_win, -10);
-//
-//			namedWindow("thresh_debug");
-//			imshow("thresh_debug", thresh_remap);
-//			waitKey(0);
-//
-//			resize(thresh_remap, remap, remap.size());
-//			GaussianBlur(remap, remap, cvSize(3, 3), 0);
-//		}
+	/// Segmentation.
+	//{
+	//	static int hist[256];
+	//	memset(hist, 0, 256*sizeof(int));
+	//	int cnt = 0;
+	//	for( int i = 0; i < rheight; i+=2 ) {
+	//		uint8_t* pmask = thresh_mask.ptr(i);
+	//		uint8_t* premap = thresh_remap.ptr(i);
+	//		for( int j = 0; j < rwidth; j+=2 ) {
+	//			if( pmask[j] < 255 ) { continue; }
+	//			hist[premap[j]]++;
+	//			cnt++;
+	//		}
+	//	}
+	//	int lo_pc = round(0.25*cnt), hi_pc = round(0.75*cnt);
+	//	uint8_t lo = 0, hi = 255;
+	//	int sum = 0;
+	//	for( int i = 0; i < 256; i++ ) {
+	//		sum += hist[i];
+	//		if( (lo == 0) && (sum >= lo_pc) ) { lo = i; }
+	//		if( (hi == 255) && (sum >= hi_pc) ) { hi = i; }
+	//	}
+	//	for( int i = 0; i < rheight; i++ ) {
+	//		uint8_t* pmask = thresh_mask.ptr(i);
+	//		uint8_t* premap = thresh_remap.ptr(i);
+	//		for( int j = 0; j < rwidth; j++ ) {
+	//			if( pmask[j] < 255 ) {
+	//				premap[j] = 128;
+	//			} else {
+	//				premap[j] = Maths::CLAMP((premap[j]+64-lo)*192.0/(hi+64-lo)+0.5, 0.0, 255.0);
+	//			}
+	//		}
+	//	}
+	//
+	//	int adapt_win = 65;
+	//	adapt_win |= 1;
+	//	adaptiveThreshold(thresh_remap, thresh_remap, 255,
+	//			ADAPTIVE_THRESH_GAUSSIAN_C,
+	//			THRESH_BINARY,
+	//			adapt_win, -10);
+	//
+	//	namedWindow("thresh_debug");
+	//	imshow("thresh_debug", thresh_remap);
+	//	waitKey(0);
+	//
+	//	resize(thresh_remap, remap, remap.size());
+	//	GaussianBlur(remap, remap, cvSize(3, 3), 0);
+	//}
 
 		#if EXTRA_DEBUG_WINDOWS
 			imshow("thresh", remap_grey);
@@ -1271,6 +1271,7 @@ int main(int argc, char *argv[])
 	BAYER_TYPE bayer_type = BAYER_NONE;
 	double sphere_orient[3] = {0,0,0};
 	bool force_draw_config = false;
+	int display_nth_frame = 1;
 
 	enum CAM_MODEL_TYPE m_cam_model = RECTILINEAR;
 
@@ -1326,6 +1327,9 @@ int main(int argc, char *argv[])
 			} else if( tokens.front().compare("do_display") == 0 ) {
 				tokens.pop_front();
 				do_display = bool(atoi(tokens.front().c_str()));
+			} else if (tokens.front().compare("display_nth_frame") == 0) {
+				tokens.pop_front();
+				display_nth_frame = atoi(tokens.front().c_str());
 			} else if( tokens.front().compare("no_prompts") == 0 ) {
 				tokens.pop_front();
 				no_prompts = bool(atoi(tokens.front().c_str()));
@@ -1509,6 +1513,7 @@ int main(int argc, char *argv[])
 	printf("frame_skip:.  .  .  %d\n", frame_skip);
 	printf("frame_step:.  .  .  %d\n", frame_step);
 	printf("do_display:.  .  .  %d\n", do_display);
+	printf("display_nth_frame:  %d\n", display_nth_frame);
 	printf("no_prompts:.  .  .  %d\n", no_prompts);
 	printf("do_config: .  .  .  %d\n", do_config);
 	printf("save_video:.  .  .  %d\n", save_video);
@@ -1811,7 +1816,7 @@ int main(int argc, char *argv[])
 							roi_done = true;
 							break;
 						default:
-//							if( key != 0xFFFF ) { printf("key: %x\n", key); }	// TODO: remove
+						//if( key != 0xFFFF ) { printf("key: %x\n", key); }	// TODO: remove
 							break;
 					}
 					// update zoom image if key pressed
@@ -1934,8 +1939,8 @@ int main(int argc, char *argv[])
 				Maths::NORMALISE_VEC(vec);
 				corners.push_back(Point3f(vec[0], vec[1], vec[2]));
 
-//				printf("(%6.1f, %6.1f): %.1f %.1f %.1f\n",
-//						px, py, vec[0], vec[1], vec[2]);
+				//printf("(%6.1f, %6.1f): %.1f %.1f %.1f\n",
+				//		px, py, vec[0], vec[1], vec[2]);
 				printf("(%6.1f, %6.1f)\n", px, py);
 
 				CmPoint32f axis(vec[0], vec[1], vec[2]);
@@ -2388,7 +2393,7 @@ int main(int argc, char *argv[])
 			vsdraw->cross(axis, -6, true);
 			axis[0] = bl2[0]; axis[1] = bl2[1]; axis[2] = bl2[2];
 			vsdraw->cross(axis, -6, true);
-//			vsdraw->display("FicTrac-config");
+			//vsdraw->display("FicTrac-config");
 
 			// draw quad axes
 			double origin[3], xaxis[3], yaxis[3], zaxis[3];
@@ -2484,7 +2489,7 @@ int main(int argc, char *argv[])
 
 		double fwd[3] = {0,0,1};
 		Maths::ROT_MAT_FROM_VECS(fwd, sphere_centre, roi_rot_mat);
-//		Maths::MAT_T(roi_rot_mat);
+		//Maths::MAT_T(roi_rot_mat);
 	}
 
 	///
@@ -2508,26 +2513,26 @@ int main(int argc, char *argv[])
 	erode(mask_remap, mask_remap, Mat(), Point(-1,-1), erode_its, BORDER_CONSTANT, 0);
 
 	// erode can fail near border, so erase.
-//	for( int i = 0; i <= erode_its; i++ ) {
-//		uint8_t* pmask_top = mask_remap.ptr(i);
-//		uint8_t* pmask_bot = mask_remap.ptr(remap_height-i-1);
-//		for( int j = 0; j < remap_width; j++ ) {
-//			pmask_top[j] = 0;
-//			pmask_bot[j] = 0;
-//		}
-//	}
-//	for( int i = 0; i < remap_height; i++ ) {
-//		uint8_t* pmask = mask_remap.ptr(i);
-//		for( int j = 0; j <= erode_its; j++ ) {
-//			pmask[j] = 0;
-//			pmask[remap_width-j-1] = 0;
-//		}
-//	}
+	//for( int i = 0; i <= erode_its; i++ ) {
+	//	uint8_t* pmask_top = mask_remap.ptr(i);
+	//	uint8_t* pmask_bot = mask_remap.ptr(remap_height-i-1);
+	//	for( int j = 0; j < remap_width; j++ ) {
+	//		pmask_top[j] = 0;
+	//		pmask_bot[j] = 0;
+	//	}
+	//}
+	//for( int i = 0; i < remap_height; i++ ) {
+	//	uint8_t* pmask = mask_remap.ptr(i);
+	//	for( int j = 0; j <= erode_its; j++ ) {
+	//		pmask[j] = 0;
+	//		pmask[remap_width-j-1] = 0;
+	//	}
+	//}
 
-#if EXTRA_DEBUG_WINDOWS
-	namedWindow("mask", CV_NORMAL);
-	imshow("mask", mask_remap);
-#endif // EXTRA_DEBUG_WINDOWS
+	#if EXTRA_DEBUG_WINDOWS
+		namedWindow("mask", CV_NORMAL);
+		imshow("mask", mask_remap);
+	#endif // EXTRA_DEBUG_WINDOWS
 
 	/// Load sphere template.
 	Mat sphere_template = Mat();
@@ -2681,10 +2686,10 @@ int main(int argc, char *argv[])
 
 	fflush(stdout);
 
-#if LOG_TIMING
-	double t0 = Utils::GET_CLOCK();
-	
-#if ENABLE_VOLTAGE_OUT
+	#if LOG_TIMING
+		double t0 = Utils::GET_CLOCK();
+		
+	#if ENABLE_VOLTAGE_OUT
 	//added for MCC USB 3101
 	hid_device*  hid = 0x0;
 	int ret;
@@ -2708,9 +2713,9 @@ int main(int argc, char *argv[])
 	    usbAOutConfig_USB31XX(hid, idx, UP_10_00V);
 	}
 	
-#endif /* ENABLE_VOLTAGE_OUT */
+	#endif /* ENABLE_VOLTAGE_OUT */
 
-#endif // LOG_TIMING
+	#endif // LOG_TIMING
 
 	unsigned int nframes = 0;
 	double av_err = 0, av_exec_time = 0, av_loop_time = 0, total_dist = 0;
@@ -2766,9 +2771,9 @@ int main(int argc, char *argv[])
 
 		if( (cnt > 1) || SPHERE_INIT ) {
 			// guess small rotation
-//			guess[0] = Utils::GEN_RAND_DBL(-0.01, 0.01);
-//			guess[1] = Utils::GEN_RAND_DBL(-0.01, 0.01);
-//			guess[2] = Utils::GEN_RAND_DBL(-0.01, 0.01);
+			//guess[0] = Utils::GEN_RAND_DBL(-0.01, 0.01);
+			//guess[1] = Utils::GEN_RAND_DBL(-0.01, 0.01);
+			//guess[2] = Utils::GEN_RAND_DBL(-0.01, 0.01);
 
 			printf("initial guess:\t%.2f %.2f %.2f\n",
 					guess[0], guess[1], guess[2]);
@@ -2782,8 +2787,8 @@ int main(int argc, char *argv[])
 			printf("initial minimisation:\t%.2f %.2f %.2f  (%.3f)\n",
 					guess[0], guess[1], guess[2], err);
 
-//			printf("recursive mean/stdv: %.1f / %.1f\n",
-//					recur_mean_err, recur_stdv_err);
+			//printf("recursive mean/stdv: %.1f / %.1f\n",
+			//		recur_mean_err, recur_stdv_err);
 
 			// if bad, do global search to re-localise
 			if( do_search && bad_frame && SPHERE_INIT ) {
@@ -2892,9 +2897,9 @@ int main(int argc, char *argv[])
 							best_guess[2] = test[2];
 						}
 
-//						if( !(bad_frame = err > max_err) ) { break; }
+					//if( !(bad_frame = err > max_err) ) { break; }
 					}
-//					if( !bad_frame ) { break; }
+				//if( !bad_frame ) { break; }
 				}
 				printf("\nsearch:\t\t%.2f %.2f %.2f  (%.3f)\n",
 						best_guess[0], best_guess[1], best_guess[2], best_score);
@@ -2962,13 +2967,13 @@ int main(int argc, char *argv[])
 			sphere.updateSphere(guess);
 
 			// r - rel vec cam (-ve of guess???)
-//			double r[3] = {-guess[0], -guess[1], -guess[2]};
+			//double r[3] = {-guess[0], -guess[1], -guess[2]};
 			double r[3] = {0,0,0};
 			Maths::MAT_MUL_VEC(roi_rot_mat, guess, r);
 			Maths::SCALE_VEC(r, -1);
 
 			// R - abs mat cam
-//			double* R = sphere.getR();
+			//double* R = sphere.getR();
 			double Rcam[9] = {1,0,0,0,1,0,0,0,1};
 			Maths::MUL_MAT(roi_rot_mat, sphere.getR(), Rcam);
 			Maths::MAT_T(Rcam);
@@ -3207,19 +3212,19 @@ int main(int argc, char *argv[])
 
 		// Serial Out modified by Pablo for MCC USB 3101  7/1/14 
 		if( do_serial_out ) {
-//			static char out[8] = {0,0,0,0,0,0,0,0};
-//			int velx_int = Maths::CLAMP((int)round(65535.0*(velx/nlopt_res+1)/2.0), 0, 65535);		// [-0.5,0.5] -> [0,65535]
-//			int vely_int = Maths::CLAMP((int)round(65535.0*(vely/nlopt_res+1)/2.0), 0, 65535);		// [-0.5,0.5] -> [0,65535]
-//			int heading_int = round(65536*heading/(2*Maths::PI));						// [0,2pi) -> [0,65535]
-//			if( heading_int >= 65536 ) { heading_int -= 65536; }
-//			out[0] = 0x52;
-//			out[1] = (velx_int >> 8) & 0xFF;
-//			out[2] = (velx_int) & 0xFF;
-//			out[3] = (vely_int >> 8) & 0xFF;
-//			out[4] = (vely_int) & 0xFF;
-//			out[5] = (heading_int >> 8) & 0xFF;
-//			out[6] = (heading_int) & 0xFF;
-//			out[7] = 0x4D;
+		//static char out[8] = {0,0,0,0,0,0,0,0};
+		//int velx_int = Maths::CLAMP((int)round(65535.0*(velx/nlopt_res+1)/2.0), 0, 65535);		// [-0.5,0.5] -> [0,65535]
+		//int vely_int = Maths::CLAMP((int)round(65535.0*(vely/nlopt_res+1)/2.0), 0, 65535);		// [-0.5,0.5] -> [0,65535]
+		//int heading_int = round(65536*heading/(2*Maths::PI));						// [0,2pi) -> [0,65535]
+		//if( heading_int >= 65536 ) { heading_int -= 65536; }
+		//out[0] = 0x52;
+		//out[1] = (velx_int >> 8) & 0xFF;
+		//out[2] = (velx_int) & 0xFF;
+		//out[3] = (vely_int >> 8) & 0xFF;
+		//out[4] = (vely_int) & 0xFF;
+		//out[5] = (heading_int >> 8) & 0xFF;
+		//out[6] = (heading_int) & 0xFF;
+		//out[7] = 0x4D;
 
 			int heading_int = round(256*heading/(2*Maths::PI));
 			if( heading_int >= 256 ) { heading_int -= 256; }
@@ -3322,51 +3327,51 @@ int main(int argc, char *argv[])
 			static CameraRemapPtr draw_remapper = CameraRemapPtr(new CameraRemap(
 					cam_model, draw_camera, roi_transform));
 			Mat draw_input = draw(Rect(0, 0, 2*draw_size, 2*draw_size));
-//			draw_input.setTo(Scalar::all(128));
+			//draw_input.setTo(Scalar::all(128));
 			draw_remapper->apply(frame_bgr, draw_input);
 
 			// draw rotation axis
-//			{
-//				double cx = draw_input.cols/2.0, cy = draw_input.rows/2.0;
-//
-//				circle(draw_input,
-//						Point(round(cx*16), round(16*cy)),
-//						8, CV_RGB(255,255,255), 1, CV_AA, 4);
-//
-//				double c[3];
-//				draw_camera->pixelIndexToVector(cx, cy, c);
-//				Maths::NORMALISE_VEC(c);
-//				double r[3] = {-guess[0], -guess[1], -guess[2]};
-//				double w[3] = {0};
-//				Maths::MAT_MUL_VEC(Rw, r, w);
-//				Maths::NORMALISE_VEC(r);
-//				r[0] = c[0]+0.1*r[0];
-//				r[1] = c[1]+0.1*r[1];
-//				r[2] = c[2]+0.1*r[2];
-//
-//				double rx, ry;
-//				draw_camera->vectorToPixelIndex(r, rx, ry);
-//
-//				line(draw_input,
-//						Point(round(cx*16), round(cy*16)),
-//						Point(round(rx*16), round(ry*16)),
-//						CV_RGB(255, 255, 255), 1, CV_AA, 4);
-//
-//				double d[3] = {w[1], -w[0], 0};
-//				Maths::NORMALISE_VEC(d);
-//				Maths::MAT_T_MUL_VEC(Rw, d, w);
-//				d[0] = c[0]+0.1*w[0];
-//				d[1] = c[1]+0.1*w[1];
-//				d[2] = c[2]+0.1*w[2];
-//
-//				double dx, dy;
-//				draw_camera->vectorToPixelIndex(d, dx, dy);
-//
-//				line(draw_input,
-//						Point(round(cx*16), round(cy*16)),
-//						Point(round(dx*16), round(dy*16)),
-//						CV_RGB(127, 127, 127), 1, CV_AA, 4);
-//			}
+			//{
+			//	double cx = draw_input.cols/2.0, cy = draw_input.rows/2.0;
+
+			//	circle(draw_input,
+			//			Point(round(cx*16), round(16*cy)),
+			//			8, CV_RGB(255,255,255), 1, CV_AA, 4);
+
+			//	double c[3];
+			//	draw_camera->pixelIndexToVector(cx, cy, c);
+			//	Maths::NORMALISE_VEC(c);
+			//	double r[3] = {-guess[0], -guess[1], -guess[2]};
+			//	double w[3] = {0};
+			//	Maths::MAT_MUL_VEC(Rw, r, w);
+			//	Maths::NORMALISE_VEC(r);
+			//	r[0] = c[0]+0.1*r[0];
+			//	r[1] = c[1]+0.1*r[1];
+			//	r[2] = c[2]+0.1*r[2];
+
+			//	double rx, ry;
+			//	draw_camera->vectorToPixelIndex(r, rx, ry);
+
+			//	line(draw_input,
+			//			Point(round(cx*16), round(cy*16)),
+			//			Point(round(rx*16), round(ry*16)),
+			//			CV_RGB(255, 255, 255), 1, CV_AA, 4);
+
+			//	double d[3] = {w[1], -w[0], 0};
+			//	Maths::NORMALISE_VEC(d);
+			//	Maths::MAT_T_MUL_VEC(Rw, d, w);
+			//	d[0] = c[0]+0.1*w[0];
+			//	d[1] = c[1]+0.1*w[1];
+			//	d[2] = c[2]+0.1*w[2];
+
+			//	double dx, dy;
+			//	draw_camera->vectorToPixelIndex(d, dx, dy);
+
+			//	line(draw_input,
+			//			Point(round(cx*16), round(cy*16)),
+			//			Point(round(dx*16), round(dy*16)),
+			//			CV_RGB(127, 127, 127), 1, CV_AA, 4);
+			//}
 
 
 			// comparison diff image
@@ -3415,8 +3420,8 @@ int main(int argc, char *argv[])
 			for( int i = 0; i < draw_size; i++ ) {
 				uint8_t* pdraw = &draw.data[i*draw.step];
 				uint8_t* proi = &draw_roi.data[i*draw_roi.step];
-//				uint8_t* pcomp = &draw_comp.data[i*draw_comp.step];
-//				uint8_t* pwarp = &draw_warp.data[i*draw_warp.step];
+				//uint8_t* pcomp = &draw_comp.data[i*draw_comp.step];
+				//uint8_t* pwarp = &draw_warp.data[i*draw_warp.step];
 				uint8_t* pdiff = &draw_diff.data[i*draw_diff.step];
 				for( int j = 0; j < draw_size; j++ ) {
 					pdraw[3*(j+2*draw_size)+0] = proi[j];
@@ -3485,49 +3490,49 @@ int main(int argc, char *argv[])
 			}
 
 			// draw quad axes
-//			{
-//				// get initial corner positions
-//				double o0[3] = {0.0, 0.0, 0.0};
-//				double x0[3] = {50.0, 0.0, 0.0};
-//				double y0[3] = {0.0, 50.0, 0.0};
-//				double z0[3] = {0.0, 0.0, 50.0};
-//
-//				// rotate corners
-//				double o1[3] = {0};
-//				Maths::MAT_T_MUL_VEC(Rw, o0, o1);
-//				double x1[3] = {0};
-//				Maths::MAT_T_MUL_VEC(Rw, x0, x1);
-//				double y1[3] = {0};
-//				Maths::MAT_T_MUL_VEC(Rw, y0, y1);
-//				double z1[3] = {0};
-//				Maths::MAT_T_MUL_VEC(Rw, z0, z1);
-//
-//				double cx = draw_input.cols/2.0, cy = draw_input.rows/2.0;
-//
-//				circle(draw_input,
-//						Point(round(cx*16), round(16*cy)),
-//						8, CV_RGB(255,255,255), 1, CV_AA, 4);
-//
-//				line(draw_input,
-//						Point(round(cx*16), round(cy*16)),
-//						Point(round((cx+x1[0])*16), round((cy+x1[1])*16)),
-//						CV_RGB(255, 255, 255), 1, CV_AA, 4);
-//				line(draw_input,
-//						Point(round(cx*16), round(cy*16)),
-//						Point(round((cx+y1[0])*16), round((cy+y1[1])*16)),
-//						CV_RGB(255, 255, 255), 1, CV_AA, 4);
-//				line(draw_input,
-//						Point(round(cx*16), round(cy*16)),
-//						Point(round((cx+z1[0])*16), round((cy+z1[1])*16)),
-//						CV_RGB(255, 255, 255), 1, CV_AA, 4);
-//
-//				drawText(draw_input, "x",
-//						cx+x1[0], cy+x1[1], 1, 255, 255, 255, true, 0);
-//				drawText(draw_input, "y",
-//						cx+y1[0], cy+y1[1], 1, 255, 255, 255, true, 0);
-//				drawText(draw_input, "z",
-//						cx+z1[0], cy+z1[1], 1, 255, 255, 255, true, 0);
-//			}
+			//{
+			//	// get initial corner positions
+			//	double o0[3] = {0.0, 0.0, 0.0};
+			//	double x0[3] = {50.0, 0.0, 0.0};
+			//	double y0[3] = {0.0, 50.0, 0.0};
+			//	double z0[3] = {0.0, 0.0, 50.0};
+
+			//	// rotate corners
+			//	double o1[3] = {0};
+			//	Maths::MAT_T_MUL_VEC(Rw, o0, o1);
+			//	double x1[3] = {0};
+			//	Maths::MAT_T_MUL_VEC(Rw, x0, x1);
+			//	double y1[3] = {0};
+			//	Maths::MAT_T_MUL_VEC(Rw, y0, y1);
+			//	double z1[3] = {0};
+			//	Maths::MAT_T_MUL_VEC(Rw, z0, z1);
+
+			//	double cx = draw_input.cols/2.0, cy = draw_input.rows/2.0;
+
+			//	circle(draw_input,
+			//			Point(round(cx*16), round(16*cy)),
+			//			8, CV_RGB(255,255,255), 1, CV_AA, 4);
+
+			//	line(draw_input,
+			//			Point(round(cx*16), round(cy*16)),
+			//			Point(round((cx+x1[0])*16), round((cy+x1[1])*16)),
+			//			CV_RGB(255, 255, 255), 1, CV_AA, 4);
+			//	line(draw_input,
+			//			Point(round(cx*16), round(cy*16)),
+			//			Point(round((cx+y1[0])*16), round((cy+y1[1])*16)),
+			//			CV_RGB(255, 255, 255), 1, CV_AA, 4);
+			//	line(draw_input,
+			//			Point(round(cx*16), round(cy*16)),
+			//			Point(round((cx+z1[0])*16), round((cy+z1[1])*16)),
+			//			CV_RGB(255, 255, 255), 1, CV_AA, 4);
+
+			//	drawText(draw_input, "x",
+			//			cx+x1[0], cy+x1[1], 1, 255, 255, 255, true, 0);
+			//	drawText(draw_input, "y",
+			//			cx+y1[0], cy+y1[1], 1, 255, 255, 255, true, 0);
+			//	drawText(draw_input, "z",
+			//			cx+z1[0], cy+z1[1], 1, 255, 255, 255, true, 0);
+			//}
 
 			// draw bee position history
 			{
@@ -3571,9 +3576,9 @@ int main(int argc, char *argv[])
 					draw_camera->vectorToPixelIndex(vec, px, py);
 					float d = sqrt((px-ppx)*(px-ppx)+(py-ppy)*(py-ppy));
 					if( (vec[2] < 1) && (d < draw_size/4.0) ) {
-//						int r = 0;
-//						int g = int(255.0*(1.0-i/float(hist_length))+0.5);
-//						int b = int(255.0*(1.0-i/float(hist_length))+0.5);
+					//int r = 0;
+					//int g = int(255.0*(1.0-i/float(hist_length))+0.5);
+					//int b = int(255.0*(1.0-i/float(hist_length))+0.5);
 
 						float mix = (i+0.5)/float(hist_length);
 
@@ -3645,7 +3650,7 @@ int main(int argc, char *argv[])
 			if( do_display ) {
 				namedWindow("FicTrac-debug");
 				imshow("FicTrac-debug", draw);
-	//			cvMoveWindow("FicTrac-debug", 10, 10);
+				//cvMoveWindow("FicTrac-debug", 10, 10);
 			}
 
 			if( save_video ) {
@@ -3684,8 +3689,12 @@ int main(int argc, char *argv[])
 			// if cam_input, wait time required for fps, else wait 1ms
 			key = waitKey(int(wait_time+0.5));
 		} else if( do_display ) {
-			key = waitKey(1);
+            //only update every 10 frames
+            if( cnt %display_nth_frame == 0) {
+			    key = waitKey(1);
+            }
 		}
+
 		if( key == 0x73 ) {
 			printf("Saving sphere template to disk (%s)...\n", template_fn.c_str());
 			fflush(stdout);
@@ -3698,8 +3707,8 @@ int main(int argc, char *argv[])
 			printf("Exiting program...\n");
 			fflush(stdout);
 			break;
-//			} else {
-//				printf("key pressed: %X\n", key);
+		//} else {
+			//printf("key pressed: %X\n", key);
 		}
 
 		double t6 = Utils::GET_CLOCK();
