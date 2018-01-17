@@ -53,7 +53,6 @@ SHARED_PTR(CameraRemap);
 #include "usb-3100.h"
 //---------------------------------
 
-#define ENABLE_VOLTAGE_OUT 1  //set to 0 if running without HID devices (ie MCC 3101)
 #define EXTRA_DEBUG_WINDOWS 0
 #define LOG_TIMING 1
 
@@ -1272,6 +1271,7 @@ int main(int argc, char *argv[])
 	double sphere_orient[3] = {0,0,0};
 	bool force_draw_config = false;
 	int display_nth_frame = 1;
+	bool mcc_enabled = true;
 
 	enum CAM_MODEL_TYPE m_cam_model = RECTILINEAR;
 
@@ -1439,6 +1439,9 @@ int main(int argc, char *argv[])
 			} else if( tokens.front().compare("output_position") == 0 ) {  //else if clause added by Pablo on 07/2014
 				tokens.pop_front();
 				output_position = bool(atoi(tokens.front().c_str()));
+			} else if( tokens.front().compare("mcc_enabled") == 0 ) {  
+				tokens.pop_front();
+				mcc_enabled = bool(atoi(tokens.front().c_str()));
 			}
 		}
 		// ignore the remainder of the line
@@ -2533,7 +2536,7 @@ int main(int argc, char *argv[])
 		namedWindow("mask", CV_NORMAL);
 		imshow("mask", mask_remap);
 	#endif // EXTRA_DEBUG_WINDOWS
-
+ 
 	/// Load sphere template.
 	Mat sphere_template = Mat();
 	if( load_template ) {
@@ -2688,10 +2691,12 @@ int main(int argc, char *argv[])
 
 	#if LOG_TIMING
 		double t0 = Utils::GET_CLOCK();
-		
-	#if ENABLE_VOLTAGE_OUT
+	
+	hid_device*  hid;
+	hid = 0x0;	
+	if (mcc_enabled) {
 	//added for MCC USB 3101
-	hid_device*  hid = 0x0;
+		try {
 	int ret;
 	int idx;
 
@@ -2703,17 +2708,26 @@ int main(int argc, char *argv[])
 	if ((hid = hid_open(MCC_VID, USB3101_PID, NULL)) > 0) {
     fprintf(stderr, "USB 3101 Device is found!");
 	}
+	else
+	{
+		fprintf(stderr, "USB 3101 Device is not found! If no mcc device is present, make sure the mcc_enabled flag is set to 0 in config file.\n");
+		return -1;
+	}
 	
 	/* config mask DIO_DIR_OUT (0x00) means all outputs */
 	usbDConfigPort_USB31XX(hid, DIO_DIR_OUT);
 	usbDOut_USB31XX(hid, 0);
-	
 	// Configure all analog channels for 0-10V output
 	for (idx = 0; idx < 8; idx++) {
 	    usbAOutConfig_USB31XX(hid, idx, UP_10_00V);
 	}
+		}
+		catch (...)
+		{
+			std::cout << "\nFailed to find mcc device. check mcc_enabled in config file\n";
+		}
 	
-	#endif /* ENABLE_VOLTAGE_OUT */
+	}
 
 	#endif // LOG_TIMING
 
@@ -3239,22 +3253,22 @@ int main(int argc, char *argv[])
 				int comp1 = round(65536.0*heading/(2*Maths::PI));
 				int comp2 = round(65536.0*inty/(2*Maths::PI));		
 					
-                #if ENABLE_VOLTAGE_OUT
-				usbAOut_USB31XX(hid, 0, (__u16) comp0, 0);
-				usbAOut_USB31XX(hid, 2, (__u16) comp2, 0);
-				usbAOut_USB31XX(hid, 1, (__u16) comp1, 0);
-                #endif /* ENABLE_VOLTAGE_OUT */
+                if (mcc_enabled) {
+					usbAOut_USB31XX(hid, 0, (__u16) comp0, 0);
+					usbAOut_USB31XX(hid, 2, (__u16) comp2, 0);
+					usbAOut_USB31XX(hid, 1, (__u16) comp1, 0);
+                }
 			}
 			else {
 				int comp0 = Maths::CLAMP((int)round(65535.0*(vely/nlopt_res+1)/2.0), 0, 65535);
 				int comp1 = Maths::CLAMP((int)round(65535.0*(w[2]/nlopt_res+1)/2.0), 0, 65535);
 				int comp2 = Maths::CLAMP((int)round(65535.0*(vely/nlopt_res+1)/2.0), 0, 65535);
 
-                #if ENABLE_VOLTAGE_OUT
-				usbAOut_USB31XX(hid, 0, (__u16) comp0, 0);
-				usbAOut_USB31XX(hid, 1, (__u16) comp1, 0);
-				usbAOut_USB31XX(hid, 2, (__u16) comp2, 0);
-                #endif /* ENABLE_VOLTAGE_OUT */
+                if (mcc_enabled) {
+					usbAOut_USB31XX(hid, 0, (__u16) comp0, 0);
+					usbAOut_USB31XX(hid, 1, (__u16) comp1, 0);
+					usbAOut_USB31XX(hid, 2, (__u16) comp2, 0);
+                }
 			}
 		}
 
