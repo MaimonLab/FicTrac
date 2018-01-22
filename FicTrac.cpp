@@ -2980,6 +2980,11 @@ int main(int argc, char *argv[])
 
 
 		} else {
+
+                        if (mcc_enabled)
+				{
+					usbAOut_USB31XX(hid, 3, (__u16) 0, 0);
+				}
 			nbad_frames = 0;
 			av_guess[0] = 0.90*guess[0]+0.10*av_guess[0];
 			av_guess[1] = 0.90*guess[1]+0.10*av_guess[1];
