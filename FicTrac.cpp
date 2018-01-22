@@ -85,6 +85,9 @@ using cv::BORDER_CONSTANT;
 using cv::BORDER_REPLICATE;
 using cv::imread;
 
+int MAX_VOLTAGE_VALUE = 65535;
+int HALF_VOLTAGE_VALUE = 32767;
+
 bool SPHERE_INIT = false;
 
 bool ACTIVE = true;
@@ -1724,6 +1727,7 @@ int main(int argc, char *argv[])
 				case 2:
 				{
 					uint16_t key = waitKey(50);
+
 					switch( key ) {
 						case 0x51:
 							sphere_cx -= 0.1;
@@ -2942,7 +2946,24 @@ int main(int argc, char *argv[])
 				SPHERE_INIT = false;
 				sphere.clearSphere();
 				first_good_frame = true;
+
+				// max voltage on channel 4 indicates max number of missed frames hit
+				if (mcc_enabled)
+				{
+				usbAOut_USB31XX(hid, 3, (__u16) MAX_VOLTAGE_VALUE, 0);
+				} 
 			}
+			else
+			{
+				// half voltage on channel 4 indicates single missed frame
+				if (mcc_enabled)
+				{
+					usbAOut_USB31XX(hid, 3, (__u16) HALF_VOLTAGE_VALUE, 0);
+				}
+			}
+
+
+
 		} else {
 			nbad_frames = 0;
 			av_guess[0] = 0.90*guess[0]+0.10*av_guess[0];
