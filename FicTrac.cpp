@@ -1671,7 +1671,7 @@ int main(int argc, char *argv[])
 		printf("\n  Select the centre of the sphere's ROI.\n");
 		fflush(stdout);
 		click.clear();
-		int roi_state = 0, roi_state_cnt = 0;
+		int roi_state = 0, roi_state_cnt = 0, speed = 1;
 		bool roi_done = false;
 		double sphere_cx = 0, sphere_cy = 0;
 		while( !roi_done ) {
@@ -1717,7 +1717,7 @@ int main(int argc, char *argv[])
 						vsdraw->display("FicTrac-config");
 						roi_state++;
 
-						printf("\n  Adjust the centre and radius using the arrow keys and +/- respectively.\n  Press ENTER when done.\n\n");
+						printf("\n  Adjust the centre and radius using the arrow keys and +/- respectively.\n  Press S to change the adjustment rate.\n  Press ENTER when done.\n\n");
 						fflush(stdout);
 					}
 					break;
@@ -1730,7 +1730,7 @@ int main(int argc, char *argv[])
 
 					switch( key ) {
 						case 0x51:
-							sphere_cx -= 0.1;
+							sphere_cx -= 0.1 * speed;
 							cam_model->pixelIndexToVector(sphere_cx, sphere_cy, sphere_centre);
 							Maths::NORMALISE_VEC(sphere_centre);
 							{
@@ -1745,7 +1745,7 @@ int main(int argc, char *argv[])
 							}
 							break;
 						case 0x52:
-							sphere_cy -= 0.1;
+							sphere_cy -= 0.1 * speed;
 							cam_model->pixelIndexToVector(sphere_cx, sphere_cy, sphere_centre);
 							Maths::NORMALISE_VEC(sphere_centre);
 							{
@@ -1760,7 +1760,7 @@ int main(int argc, char *argv[])
 							}
 							break;
 						case 0x53:
-							sphere_cx += 0.1;
+							sphere_cx += 0.1 * speed;
 							cam_model->pixelIndexToVector(sphere_cx, sphere_cy, sphere_centre);
 							Maths::NORMALISE_VEC(sphere_centre);
 							{
@@ -1775,7 +1775,7 @@ int main(int argc, char *argv[])
 							}
 							break;
 						case 0x54:
-							sphere_cy += 0.1;
+							sphere_cy += 0.1 * speed;
 							cam_model->pixelIndexToVector(sphere_cx, sphere_cy, sphere_centre);
 							Maths::NORMALISE_VEC(sphere_centre);
 							{
@@ -1790,7 +1790,7 @@ int main(int argc, char *argv[])
 							}
 							break;
 						case 0x2D:
-							sphere_fov -= 0.1*(vfov*Maths::R2D/45.0)*Maths::D2R;
+							sphere_fov -= 0.1 * speed *(vfov*Maths::R2D/45.0)*Maths::D2R;
 							{
 								CmPoint32f axis(sphere_centre[0], sphere_centre[1], sphere_centre[2]);
 								vsdraw->openImage(cam_model, frame_bgr);
@@ -1804,7 +1804,7 @@ int main(int argc, char *argv[])
 							}
 							break;
 						case 0x3D:
-							sphere_fov += 0.1*(vfov*Maths::R2D/45.0)*Maths::D2R;
+							sphere_fov += 0.1 * speed *(vfov*Maths::R2D/45.0)*Maths::D2R;
 							{
 								CmPoint32f axis(sphere_centre[0], sphere_centre[1], sphere_centre[2]);
 								vsdraw->openImage(cam_model, frame_bgr);
@@ -1817,6 +1817,21 @@ int main(int argc, char *argv[])
 								printf("sphere FoV: %.1f degrees\n", sphere_fov*Maths::R2D);
 							}
 							break;
+						case 0x73:
+							if (speed ==1)
+							{
+								speed = 10;
+								printf("adjustment rate is High\n");
+							}
+							else
+							{
+								speed =1;
+								printf("adjustment rate is Low\n");
+							}
+							break;
+
+
+
 						case 0x0A:
 						case 0x0D:
 						case 0xFF8D:
