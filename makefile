@@ -14,10 +14,10 @@ TARGETSM= libmcchid.so libmcchid.a
 
 #Declarations for FicTrac
 CC2=g++
-CFLAGSF=-D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -I"./library" -I"/usr/include/cairomm-1.0" -O3 -Wall -c -fmessage-length=0 -std=c++0x -Wno-unused-function `pkg-config --cflags cairomm-1.0` -MMD
+CFLAGSF=-DPGR_CAMERA -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -I"./library" -I"/usr/include/cairomm-1.0" -O3 -Wall -c -fmessage-length=0 -std=c++0x -Wno-unused-function `pkg-config --cflags cairomm-1.0` -MMD
 OBJECTSF=$(SOURCESF:.cpp=.o)
 DEPENDS=$(SOURCESF:.cpp=.d)
-LDLIBS=-lopencv_core -lopencv_highgui -lopencv_imgproc -lopencv_video -lpthread -lavformat -lavcodec -lavutil -lswscale -lnlopt -lcairo -lcairomm-1.0 -lsigc-2.0 -lrt
+LDLIBS=-lopencv_core -lopencv_highgui -lopencv_imgproc -lopencv_video -lpthread -lavformat -lavcodec -lavutil -lswscale -lnlopt -lcairo -lcairomm-1.0 -lsigc-2.0 -lrt -lflycapture
 EXECUTABLE=FicTrac
 SOURCESF=FicTrac.cpp \
     ./library/AVWriter.cpp \
@@ -30,10 +30,10 @@ SOURCESF=FicTrac.cpp \
     ./library/ImgSource.cpp \
     ./library/Maths.cpp \
     ./library/NLoptFunc.cpp \
-    ./library/PGRSource.cpp \
     ./library/readwrite.cpp \
     ./library/RectilinearCameraModel.cpp \
     ./library/Remapper.cpp \
+    ./library/PGRSource.cpp \
     ./library/serial.cpp \
     ./library/Utils.cpp \
     ./library/VsDraw.cpp

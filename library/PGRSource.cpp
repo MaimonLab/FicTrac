@@ -4,10 +4,13 @@
  *  Created on: May 25, 2013
  *      Author: rjdmoore@uqconnect.edu.au
  */
-
+  
 #ifdef PGR_CAMERA
-
+ 
 #include "PGRSource.h"
+#include <flycapture/FlyCapture2.h>
+#include <flycapture/Error.h>
+#include <flycapture/Image.h>
 
 using cv::Mat;
 using namespace FlyCapture2;
@@ -53,7 +56,7 @@ PGRSource::PGRSource(int index)
 	error = _cap->RetrieveBuffer(&testImg);
 	if( error != PGRERROR_OK ) {
 		fprintf(stderr, "%s: Error capturing image!\n", __func__);
-		return;
+		return; 
 	}
 	_width = testImg.GetCols();
 	_height = testImg.GetRows();
