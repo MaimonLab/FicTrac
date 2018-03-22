@@ -1270,6 +1270,8 @@ int main(int argc, char *argv[])
 	double sphere_orient[3] = {0,0,0};
 	bool force_draw_config = false;
 	bool mcc_enabled = true;
+	unsigned int max_sphere_reset = 0;
+	string sphere_reset_contact = "";
 
 	enum CAM_MODEL_TYPE m_cam_model = RECTILINEAR;
 
@@ -1437,6 +1439,12 @@ int main(int argc, char *argv[])
 			} else if( tokens.front().compare("mcc_enabled") == 0 ) {  
 				tokens.pop_front();
 				mcc_enabled = bool(atoi(tokens.front().c_str()));
+			} else if( tokens.front().compare("max_sphere_reset") == 0 ) {  
+				tokens.pop_front();
+				max_sphere_reset = Utils::STR2NUM(tokens.front());
+			} else if( tokens.front().compare("sphere_reset_contact") == 0 ) {  
+				tokens.pop_front();
+				sphere_reset_contact = tokens.front();
 			}
 		}
 		// ignore the remainder of the line
@@ -2725,7 +2733,8 @@ int main(int argc, char *argv[])
 	}
 
 #endif // LOG_TIMING
-
+	unsigned int nSphereResets = 0;
+	bool mIsSphereResetEmailSent = false;
 	unsigned int nframes = 0;
 	double av_err = 0, av_exec_time = 0, av_loop_time = 0, total_dist = 0;
 	for( unsigned int cnt = 1, seq_n = 1; ; cnt++, seq_n++ ) {
@@ -2917,18 +2926,25 @@ int main(int argc, char *argv[])
 				double ub[3] = {best_guess[0]+nlopt_res, best_guess[1]+nlopt_res, best_guess[2]+nlopt_res};
 				sphere.setLowerBounds(lb);
 				sphere.setUpperBounds(ub);
-				sphere.optimize(best_guess);
+				int optResults = sphere.optimize(best_guess);
 				sphere.getOptX(guess);
 				err = sphere.getOptF();
 
 				bad_frame = err > max_err;
+				if (optResults > 0){
+				  printf("minimised:\t%.2f %.2f %.2f  (%.3f)\n",
+					 guess[0], guess[1], guess[2], err);
+				}
+				else{
+				  printf("optimization failed with error code %i\n Error number is (%.3f)\n",
+					 optResults, err);
 
-				printf("minimised:\t%.2f %.2f %.2f  (%.3f)\n",
-						guess[0], guess[1], guess[2], err);
+				}
 			}
 		}
 		if( bad_frame ) {
-			nbad_frames++;
+		//if(true){
+		  nbad_frames++;
 
 			if( (max_bad_frames > 0) && (nbad_frames > max_bad_frames) ) {
 				// reset output data
@@ -2937,9 +2953,29 @@ int main(int argc, char *argv[])
 				SPHERE_INIT = false;
 				sphere.clearSphere();
 				first_good_frame = true;
+				nSphereResets++;
+				if( (max_sphere_reset > 0) &&
+				    (nSphereResets > max_sphere_reset) &&
+				    !mIsSphereResetEmailSent){
+				  string bodyMsg = "FicTrac has stopped working correctly. Fictrack needs to be fixed.  -Love the gnomes in the computer";
+				  string subject = "FicTrac is down";
+				  std::stringstream commandStream;
+				  commandStream << "echo \"" << bodyMsg << "\" | mailx -s \"" << subject << "\" " << sphere_reset_contact;
+				  string command = commandStream.str();
+				  //sprintf(command, "echo \"%s\" | mailx -s \"%s\" %s", bodyMsg, subject, sphere_reset_contact);
+				  printf("%s\n", command.c_str());
+				  system(command.c_str());
+				  mIsSphereResetEmailSent = true;
+				  
+
+				  }
 			}
 		} else {
 			nbad_frames = 0;
+			if(SPHERE_INIT){
+			  mIsSphereResetEmailSent = false;
+			  nSphereResets = 0;
+			}
 			av_guess[0] = 0.90*guess[0]+0.10*av_guess[0];
 			av_guess[1] = 0.90*guess[1]+0.10*av_guess[1];
 			av_guess[2] = 0.90*guess[2]+0.10*av_guess[2];
