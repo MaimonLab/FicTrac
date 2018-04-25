@@ -1577,7 +1577,7 @@ int main(int argc, char *argv[])
 		cap->setFPS(fps);
 
 		// set bayer mode
-		cap->setBayerType(bayer_type);
+		//cap->setBayerType(bayer_type);
 	} else {
 		// input video
 		cap = boost::shared_ptr<CVSource>(new CVSource(input_vid_fn));
