@@ -18,6 +18,7 @@ SHARED_PTR(CameraRemap);
 #include "VsDraw.h"
 #include "serial.h"
 #include "CVSource.h"
+#include "FicTcpClient.h"
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -1272,6 +1273,8 @@ int main(int argc, char *argv[])
 	bool mcc_enabled = true;
 	unsigned int max_sphere_reset = 0;
 	string sphere_reset_contact = "";
+	string tcp_server_ip = "";
+	int tcp_server_port = 0;
 
 	enum CAM_MODEL_TYPE m_cam_model = RECTILINEAR;
 
@@ -1445,7 +1448,14 @@ int main(int argc, char *argv[])
 			} else if( tokens.front().compare("sphere_reset_contact") == 0 ) {  
 				tokens.pop_front();
 				sphere_reset_contact = tokens.front();
+			} else if( tokens.front().compare("tcp_server_ip") == 0 ) {  
+				tokens.pop_front();
+				tcp_server_ip = tokens.front();
+			} else if( tokens.front().compare("tcp_server_port") == 0 ) {  
+				tokens.pop_front();
+				tcp_server_port = Utils::STR2NUM(tokens.front());
 			}
+
 		}
 		// ignore the remainder of the line
 		getline(file, line);
@@ -2684,6 +2694,17 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	// TCP CLIENT
+	FicTcpClient* tcpClient;
+	if(tcp_server_ip != "")
+	  {
+	    tcpClient = new FicTcpClient(tcp_server_ip.c_str(), tcp_server_port);
+	    tcpClient->StartClient();
+	  }
+
+
+
+
 	///
 	/// PROGRAM LOOP
 	///
@@ -3001,6 +3022,7 @@ int main(int argc, char *argv[])
 		static double heading = 0;
 		static double intx = 0;
 		static double inty = 0;
+		double direction;
 		
 		//w - rel vec world
 		//moved and made "static" by Pablo 07/2014
@@ -3060,7 +3082,7 @@ int main(int argc, char *argv[])
 			double speed = sqrt(velx*velx+vely*vely); //FIXME: this is probably an approximation, affects integrated x/y?
 
 			// running direction
-			double direction = atan2(vely, velx);
+			direction = atan2(vely, velx);
 			if( direction < 0*Maths::D2R ) { direction += 360*Maths::D2R; }
 
 			// integrated x/y pos (optical mouse style)
@@ -3302,6 +3324,16 @@ int main(int argc, char *argv[])
                 }
 			}
 		}
+
+		if(tcp_server_ip != "")
+		  {
+
+		    tcpClient->Send(intx, inty, heading);
+
+		  }
+
+
+
 
 		if( do_socket_out ) {
 			pthread_mutex_lock(&(_socket->mutex));

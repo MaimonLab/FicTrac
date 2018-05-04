@@ -26,6 +26,7 @@ SOURCESF=FicTrac.cpp \
     ./library/CmPoint.cpp \
     ./library/CVSource.cpp \
     ./library/EquiAreaCameraModel.cpp \
+    ./library/FicTcpClient.cpp \
     ./library/FisheyeCameraModel.cpp \
     ./library/ImgSource.cpp \
     ./library/Maths.cpp \
