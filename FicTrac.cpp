@@ -1272,7 +1272,7 @@ int main(int argc, char *argv[])
 	bool mcc_enabled = true;
 	unsigned int max_sphere_reset = 0;
 	string sphere_reset_contact = "";
-    bool datestamp_output_file = false;
+	bool datestamp_output_file = false;
 
 	enum CAM_MODEL_TYPE m_cam_model = RECTILINEAR;
 
@@ -1443,12 +1443,12 @@ int main(int argc, char *argv[])
 			} else if( tokens.front().compare("max_sphere_reset") == 0 ) {
 				tokens.pop_front();
 				max_sphere_reset = Utils::STR2NUM(tokens.front());
-            } else if( tokens.front().compare("sphere_reset_contact") == 0 ) {
+			} else if( tokens.front().compare("sphere_reset_contact") == 0 ) {
 				tokens.pop_front();
 				sphere_reset_contact = tokens.front();
 			} else if( tokens.front().compare("datestamp_output_file") == 0 ) {
 				tokens.pop_front();
-				datestamp_output_file = tokens.front();
+				datestamp_output_file = bool(atoi(tokens.front().c_str()));
 			}
 		}
 		// ignore the remainder of the line
@@ -1511,11 +1511,13 @@ int main(int argc, char *argv[])
 		m_cam_model = FISHEYE;
 	}
 
+	// add datestamp as epoch time to output file if datestamp_output_file is true (Jazz 8/16/18)
+	// avoids overwriting output files!
     if (datestamp_output_file){
-        time_t t = mktime(NULL);
+        time_t t = time(nullptr);
         std::stringstream stream;
         stream <<t;
-        output_fn = output_fn + "_" + stream.str();
+        output_fn = output_fn.substr(0, output_fn.length()-4) + "_" + stream.str() + ".dat";
     }
 
 
@@ -1564,6 +1566,7 @@ int main(int argc, char *argv[])
 			sphere_orient[0], sphere_orient[1], sphere_orient[2]);
 	printf("bayer_type:.  .  .  %d\n", bayer_type);
 	printf("force_draw_config:  %d\n", force_draw_config);
+	printf("datestamp_output_file:  %d\n", datestamp_output_file);
 	printf("\n");
 
 	fflush(stdout);
