@@ -1272,6 +1272,7 @@ int main(int argc, char *argv[])
 	bool mcc_enabled = true;
 	unsigned int max_sphere_reset = 0;
 	string sphere_reset_contact = "";
+	bool datestamp_output_file = false;
 
 	enum CAM_MODEL_TYPE m_cam_model = RECTILINEAR;
 
@@ -1436,15 +1437,18 @@ int main(int argc, char *argv[])
 			} else if( tokens.front().compare("output_position") == 0 ) {  //else if clause added by Pablo on 07/2014
 				tokens.pop_front();
 				output_position = bool(atoi(tokens.front().c_str()));
-			} else if( tokens.front().compare("mcc_enabled") == 0 ) {  
+			} else if( tokens.front().compare("mcc_enabled") == 0 ) {
 				tokens.pop_front();
 				mcc_enabled = bool(atoi(tokens.front().c_str()));
-			} else if( tokens.front().compare("max_sphere_reset") == 0 ) {  
+			} else if( tokens.front().compare("max_sphere_reset") == 0 ) {
 				tokens.pop_front();
 				max_sphere_reset = Utils::STR2NUM(tokens.front());
-			} else if( tokens.front().compare("sphere_reset_contact") == 0 ) {  
+			} else if( tokens.front().compare("sphere_reset_contact") == 0 ) {
 				tokens.pop_front();
 				sphere_reset_contact = tokens.front();
+			} else if( tokens.front().compare("datestamp_output_file") == 0 ) {
+				tokens.pop_front();
+				datestamp_output_file = bool(atoi(tokens.front().c_str()));
 			}
 		}
 		// ignore the remainder of the line
@@ -1507,6 +1511,17 @@ int main(int argc, char *argv[])
 		m_cam_model = FISHEYE;
 	}
 
+	// add datestamp as epoch time to output file if datestamp_output_file is true (Jazz 8/16/18)
+	// avoids overwriting output files!
+    if (datestamp_output_file){
+        time_t t = time(nullptr);
+        std::stringstream stream;
+        stream <<t;
+        output_fn = output_fn.substr(0, output_fn.length()-4) + "_" + stream.str() + ".dat";
+    }
+
+
+
 	printf("\nInitialising program variables:\n");
 	printf("input_vid_fn: .  .  '%s'\n", input_vid_fn.c_str());
 	printf("output_fn: .  .  .  '%s'\n", output_fn.c_str());
@@ -1551,6 +1566,7 @@ int main(int argc, char *argv[])
 			sphere_orient[0], sphere_orient[1], sphere_orient[2]);
 	printf("bayer_type:.  .  .  %d\n", bayer_type);
 	printf("force_draw_config:  %d\n", force_draw_config);
+	printf("datestamp_output_file:  %d\n", datestamp_output_file);
 	printf("\n");
 
 	fflush(stdout);
@@ -2537,7 +2553,7 @@ int main(int argc, char *argv[])
 	namedWindow("mask", CV_NORMAL);
 	imshow("mask", mask_remap);
 #endif // EXTRA_DEBUG_WINDOWS
- 
+
 	/// Load sphere template.
 	Mat sphere_template = Mat();
 	if( load_template ) {
@@ -2692,8 +2708,8 @@ int main(int argc, char *argv[])
 
 #if LOG_TIMING
 	double t0 = Utils::GET_CLOCK();
-	
-	
+
+
 	HIDInterface*  hid = 0x0;
 	if (mcc_enabled) {
 	__u8 channel;
@@ -2716,7 +2732,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "USB 3101 Device is not found! If no mcc device is present, make sure the mcc_enabled flag is set to 0 in config file.\n");
 		return -1;
 	}
-	
+
 	/* config mask DIO_DIR_OUT (0x00) means all outputs */
 	usbDConfigPort_USB31XX(hid, DIO_DIR_OUT);
 	usbDOut_USB31XX(hid, 0);
@@ -2729,7 +2745,7 @@ int main(int argc, char *argv[])
 		{
 			std::cout << "\nFailed to find mcc device. check mcc_enabled in config file\n";
 		}
-	
+
 	}
 
 #endif // LOG_TIMING
@@ -2966,7 +2982,7 @@ int main(int argc, char *argv[])
 				  printf("%s\n", command.c_str());
 				  system(command.c_str());
 				  mIsSphereResetEmailSent = true;
-				  
+
 
 				  }
 			}
@@ -3001,7 +3017,7 @@ int main(int argc, char *argv[])
 		static double heading = 0;
 		static double intx = 0;
 		static double inty = 0;
-		
+
 		//w - rel vec world
 		//moved and made "static" by Pablo 07/2014
 		static double w[3] = {0,0,0};
@@ -3255,7 +3271,7 @@ int main(int argc, char *argv[])
 			clfs << cnt << ", " << intx << ", " << inty << ", " << heading << ", " << cnt << endl;
 		}
 
-		// Serial Out modified by Pablo for MCC USB 3101  7/1/14 
+		// Serial Out modified by Pablo for MCC USB 3101  7/1/14
 		if( do_serial_out ) {
 //			static char out[8] = {0,0,0,0,0,0,0,0};
 //			int velx_int = Maths::CLAMP((int)round(65535.0*(velx/nlopt_res+1)/2.0), 0, 65535);		// [-0.5,0.5] -> [0,65535]
@@ -3278,12 +3294,12 @@ int main(int argc, char *argv[])
 			if( serial_write(&_serial, &heading_8bit, 1) != 1 ) {
 				fprintf(stderr, "ERROR: Short write to serial (%s)!\n", serial_port.c_str());
 			}
-			
+
 			if (output_position) {
 				int comp0 = round(65536.0*intx/(2*Maths::PI));
 				int comp1 = round(65536.0*heading/(2*Maths::PI));
-				int comp2 = round(65536.0*inty/(2*Maths::PI));		
-					
+				int comp2 = round(65536.0*inty/(2*Maths::PI));
+
                 if (mcc_enabled) {
 					usbAOut_USB31XX(hid, 0, (__u16) comp0, 0);
 					usbAOut_USB31XX(hid, 2, (__u16) comp2, 0);
@@ -3818,4 +3834,3 @@ int main(int argc, char *argv[])
 
 	if( do_serial_out ) { serial_close(&_serial); }
 }
-
