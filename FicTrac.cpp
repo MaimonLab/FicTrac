@@ -964,7 +964,7 @@ void* grabInputFrames(void* obj)
 		}
 
 	//double t2 = Utils::GET_CLOCK();
-	//printf("  %s loop time: %.1fms\n", __func__, (t2-t1)*1e3);	
+	//printf("  %s loop time: %.1fms\n", __func__, (t2-t1)*1e3);
 
 	/// Segmentation.
 	//{
@@ -1453,7 +1453,7 @@ int main(int argc, char *argv[])
 			} else if( tokens.front().compare("output_position") == 0 ) {  //else if clause added by Pablo on 07/2014
 				tokens.pop_front();
 				output_position = bool(atoi(tokens.front().c_str()));
-			} else if( tokens.front().compare("mcc_enabled") == 0 ) {  
+			} else if( tokens.front().compare("mcc_enabled") == 0 ) {
 				tokens.pop_front();
 				mcc_enabled = bool(atoi(tokens.front().c_str()));
 			}
@@ -2551,7 +2551,7 @@ int main(int argc, char *argv[])
 		namedWindow("mask", CV_NORMAL);
 		imshow("mask", mask_remap);
 	#endif // EXTRA_DEBUG_WINDOWS
- 
+
 	/// Load sphere template.
 	Mat sphere_template = Mat();
 	if( load_template ) {
@@ -2706,9 +2706,9 @@ int main(int argc, char *argv[])
 
 	#if LOG_TIMING
 		double t0 = Utils::GET_CLOCK();
-	
+
 	hid_device*  hid;
-	hid = 0x0;	
+	hid = 0x0;
 	if (mcc_enabled) {
 	//added for MCC USB 3101
 		try {
@@ -2728,7 +2728,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "USB 3101 Device is not found! If no mcc device is present, make sure the mcc_enabled flag is set to 0 in config file.\n");
 		return -1;
 	}
-	
+
 	/* config mask DIO_DIR_OUT (0x00) means all outputs */
 	usbDConfigPort_USB31XX(hid, DIO_DIR_OUT);
 	usbDOut_USB31XX(hid, 0);
@@ -2741,7 +2741,7 @@ int main(int argc, char *argv[])
 		{
 			std::cout << "\nFailed to find mcc device. check mcc_enabled in config file\n";
 		}
-	
+
 	}
 
 	#endif // LOG_TIMING
@@ -2963,8 +2963,8 @@ int main(int argc, char *argv[])
 				// max voltage on channel 4 indicates max number of missed frames hit
 				if (mcc_enabled)
 				{
-				usbAOut_USB31XX(hid, 3, (__u16) MAX_VOLTAGE_VALUE, 0);
-				} 
+					usbAOut_USB31XX(hid, 3, (__u16) MAX_VOLTAGE_VALUE, 0);
+				}
 			}
 			else
 			{
@@ -3009,7 +3009,7 @@ int main(int argc, char *argv[])
 		static double heading = 0;
 		static double intx = 0;
 		static double inty = 0;
-		
+
 		//w - rel vec world
 		//moved and made "static" by Pablo 07/2014
 		static double w[3] = {0,0,0};
@@ -3263,7 +3263,7 @@ int main(int argc, char *argv[])
 			clfs << cnt << ", " << intx << ", " << inty << ", " << heading << ", " << cnt << endl;
 		}
 
-		// Serial Out modified by Pablo for MCC USB 3101  7/1/14 
+		// Serial Out modified by Pablo for MCC USB 3101  7/1/14
 		if( do_serial_out ) {
 		//static char out[8] = {0,0,0,0,0,0,0,0};
 		//int velx_int = Maths::CLAMP((int)round(65535.0*(velx/nlopt_res+1)/2.0), 0, 65535);		// [-0.5,0.5] -> [0,65535]
@@ -3286,28 +3286,24 @@ int main(int argc, char *argv[])
 			if( serial_write(&_serial, &heading_8bit, 1) != 1 ) {
 				fprintf(stderr, "ERROR: Short write to serial (%s)!\n", serial_port.c_str());
 			}
-			
+
+			int comp0, comp1, comp2;
+
 			if (output_position) {
-				int comp0 = round(65536.0*intx/(2*Maths::PI));
-				int comp1 = round(65536.0*heading/(2*Maths::PI));
-				int comp2 = round(65536.0*inty/(2*Maths::PI));		
-					
-				if (mcc_enabled) {
-					usbAOut_USB31XX(hid, 0, (__u16) comp0, 0);
-					usbAOut_USB31XX(hid, 2, (__u16) comp2, 0);
-					usbAOut_USB31XX(hid, 1, (__u16) comp1, 0);
-				}
+				comp0 = round(65536.0*intx/(2*Maths::PI));
+				comp1 = round(65536.0*heading/(2*Maths::PI));
+				comp2 = round(65536.0*inty/(2*Maths::PI));
 			}
 			else {
-				int comp0 = Maths::CLAMP((int)round(65535.0*(velx/nlopt_res+1)/2.0), 0, 65535);
-				int comp1 = Maths::CLAMP((int)round(65535.0*(w[2]/nlopt_res+1)/2.0), 0, 65535);
-				int comp2 = Maths::CLAMP((int)round(65535.0*(vely/nlopt_res+1)/2.0), 0, 65535);
+				comp0 = Maths::CLAMP((int)round(65535.0*(velx/nlopt_res+1)/2.0), 0, 65535);
+				comp1 = Maths::CLAMP((int)round(65535.0*(w[2]/nlopt_res+1)/2.0), 0, 65535);
+				comp2 = Maths::CLAMP((int)round(65535.0*(vely/nlopt_res+1)/2.0), 0, 65535);
+			}
 
-				if (mcc_enabled) {
-					usbAOut_USB31XX(hid, 0, (__u16) comp0, 0);
-					usbAOut_USB31XX(hid, 1, (__u16) comp1, 0);
-					usbAOut_USB31XX(hid, 2, (__u16) comp2, 0);
-				}
+			if (mcc_enabled) {
+				usbAOut_USB31XX(hid, 0, (__u16) comp0, 0);
+				usbAOut_USB31XX(hid, 1, (__u16) comp1, 0);
+				usbAOut_USB31XX(hid, 2, (__u16) comp2, 0);
 			}
 		}
 
@@ -3830,4 +3826,3 @@ int main(int argc, char *argv[])
 
 	if( do_serial_out ) { serial_close(&_serial); }
 }
-
