@@ -1293,6 +1293,7 @@ int main(int argc, char *argv[])
 	serial _serial;
 	bool do_serial_out = false;
 	bool output_position= false;  //added by Pablo 07/2014
+	bool single_axis= true;  //added by Hessam 05/2019
 	int serial_baud = 115200;
 	string serial_port = "/dev/ttyS0";
 
@@ -1453,6 +1454,9 @@ int main(int argc, char *argv[])
 			} else if( tokens.front().compare("output_position") == 0 ) {  //else if clause added by Pablo on 07/2014
 				tokens.pop_front();
 				output_position = bool(atoi(tokens.front().c_str()));
+			} else if( tokens.front().compare("single_axis") == 0 ) {  //else if clause added by Pablo on 07/2014
+				tokens.pop_front();
+				single_axis = bool(atoi(tokens.front().c_str()));
 			} else if( tokens.front().compare("mcc_enabled") == 0 ) {
 				tokens.pop_front();
 				mcc_enabled = bool(atoi(tokens.front().c_str()));
@@ -3014,6 +3018,10 @@ int main(int argc, char *argv[])
 		//moved and made "static" by Pablo 07/2014
 		static double w[3] = {0,0,0};
 
+		//moved and made static by Hessam 5/2019
+		static double Rcv[3] = {0,0,0};
+		static double Rv[3] = {0,0,0};
+
 		// save if good
 		if( !bad_frame || !SPHERE_INIT ) {
 
@@ -3050,12 +3058,12 @@ int main(int argc, char *argv[])
 			Maths::MUL_MAT(Rf, Rcam, Rc);
 
 			// Rv - abs vec cam
-			double Rcv[3] = {0,0,0};
+			// double Rcv[3] = {0,0,0}; made static by Hessam 5/2019
 			Maths::ANGLE_AXIS_FROM_MAT(Rc, Rcv);
 
 			// FIXME: hack to avoid bee pos history drawing failing
 			// (path hist on ball was failing when Rf != 1)
-			double Rv[3] = {0,0,0};
+			// double Rv[3] = {0,0,0}; made static by Hessam 5/2019
 			Maths::ANGLE_AXIS_FROM_MAT(Rcam, Rv);
 
 			// Wv - abs vec world
@@ -3293,8 +3301,15 @@ int main(int argc, char *argv[])
 				comp0 = round(65536.0*intx/(2*Maths::PI));
 				comp1 = round(65536.0*heading/(2*Maths::PI));
 				comp2 = round(65536.0*inty/(2*Maths::PI));
-			}
-			else {
+			} else if(single_axis) {
+				double roughAxis[3] = {-1, 0, 0}; // unitary axis in the rough direction of rotation in camera's frame of reference (at most 90 degrees off)
+				int sign = (Rcv[0]*roughAxis[0] + Rcv[1]*roughAxis[1] + Rcv[2]*roughAxis[2] > 0 ? 1 : -1);
+				double absoluteRotation = sqrt(Rcv[0]*Rcv[0] + Rcv[1]*Rcv[1] + Rcv[2]*Rcv[2]) * sign;
+				//absoluteRotation -= (2*Maths::PI) * floor(absoluteRotation / (2*Maths::PI));
+				comp0 = round(65536.0*(0.5 + 0.5 * absoluteRotation/Maths::PI));
+				comp1 = round(65536.0*(0.5 + 0.5 * Rcv[1]/Maths::PI)); // not sure what to do with these other channels
+				comp2 = round(65536.0*(0.5 + 0.5 * Rcv[2]/Maths::PI)); // not sure what to do with these other channels
+			} else {
 				comp0 = Maths::CLAMP((int)round(65535.0*(velx/nlopt_res+1)/2.0), 0, 65535);
 				comp1 = Maths::CLAMP((int)round(65535.0*(w[2]/nlopt_res+1)/2.0), 0, 65535);
 				comp2 = Maths::CLAMP((int)round(65535.0*(vely/nlopt_res+1)/2.0), 0, 65535);
