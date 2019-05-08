@@ -2836,81 +2836,11 @@ int main(int argc, char *argv[])
 				fflush(stdout);
 				for( int i = 1; i <= nsearch_pts; i++ ) {
 					float pc = float(i)/nsearch_pts;
-					switch( search_state ) {
-						case 0:
-							if( pc >= 0.1 ) {
-								printf("10%% ");
-								fflush(stdout);
-								search_state++;
-							}
-							break;
-						case 1:
-							if( pc >= 0.2 ) {
-								printf("20%% ");
-								fflush(stdout);
-								search_state++;
-							}
-							break;
-						case 2:
-							if( pc >= 0.3 ) {
-								printf("30%% ");
-								fflush(stdout);
-								search_state++;
-							}
-							break;
-						case 3:
-							if( pc >= 0.4 ) {
-								printf("40%% ");
-								fflush(stdout);
-								search_state++;
-							}
-							break;
-						case 4:
-							if( pc >= 0.5 ) {
-								printf("50%% ");
-								fflush(stdout);
-								search_state++;
-							}
-							break;
-						case 5:
-							if( pc >= 0.6 ) {
-								printf("60%% ");
-								fflush(stdout);
-								search_state++;
-							}
-							break;
-						case 6:
-							if( pc >= 0.7 ) {
-								printf("70%% ");
-								fflush(stdout);
-								search_state++;
-							}
-							break;
-						case 7:
-							if( pc >= 0.8 ) {
-								printf("80%% ");
-								fflush(stdout);
-								search_state++;
-							}
-							break;
-						case 8:
-							if( pc >= 0.9 ) {
-								printf("90%% ");
-								fflush(stdout);
-								search_state++;
-							}
-							break;
-						case 9:
-							if( pc >= 1 ) {
-								printf("100%% ");
-								fflush(stdout);
-								search_state++;
-							}
-							break;
-						default:
-							break;
+					if(search_state < floor(pc*10))
+						printf("%d%% ", floor(pc*100));
+						fflush(stdout);
+						search_state++;
 					}
-					fflush(stdout);
 
 					guess[0] = Utils::GEN_RAND_GSN(1,0);
 					guess[1] = Utils::GEN_RAND_GSN(1,0);
