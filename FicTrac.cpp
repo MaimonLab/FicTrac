@@ -1293,7 +1293,7 @@ int main(int argc, char *argv[])
 	serial _serial;
 	bool do_serial_out = false;
 	bool output_position= false;  //added by Pablo 07/2014
-	bool single_axis= true;  //added by Hessam 05/2019
+	bool single_axis= false;  //added by Hessam 05/2019
 	int serial_baud = 115200;
 	string serial_port = "/dev/ttyS0";
 
