@@ -2836,8 +2836,8 @@ int main(int argc, char *argv[])
 				fflush(stdout);
 				for( int i = 1; i <= nsearch_pts; i++ ) {
 					float pc = float(i)/nsearch_pts;
-					if(search_state < floor(pc*10))
-						printf("%d%% ", floor(pc*100));
+					if(search_state < floor(pc*10)) {
+						printf("%d%% ", int(pc*100));
 						fflush(stdout);
 						search_state++;
 					}
