@@ -14,6 +14,8 @@
 #include <opencv2/opencv.hpp>
 #include <boost/shared_ptr.hpp>
 #include <flycapture/FlyCapture2.h>
+#include <flycapture/Error.h>
+#include <flycapture/Image.h>
 
 class PGRSource : public ImgSource {
 public:

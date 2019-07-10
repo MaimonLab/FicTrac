@@ -5,49 +5,19 @@
 
 #Declarations for mcclibhid
 CC=gcc
+SOURCESM= ./library/pmd.c ./library/usb-3100.c
+HEADERS= ./library/pmd.h ./library/usb-3100.h
+OBJECTSM= $(SOURCESM:.c=.o)
 CFLAGS= -g -Wall -fPIC -O
+TARGETSM= libmcchid.so libmcchid.a
+
 
 #Declarations for FicTrac
 CC2=g++
-CFLAGSF=-DPGR_CAMERA -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -Wall -g -c -O3 -fmessage-length=0 -std=c++0x -Wno-unused-function `pkg-config --cflags cairomm-1.0` -MMD
-# used to have cflagsf -O3
-LDFLAGS=-g -Wall 
-
+CFLAGSF=-DPGR_CAMERA -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -I"./library" -I"/usr/include/cairomm-1.0" -O3 -Wall -c -fmessage-length=0 -std=c++0x -Wno-unused-function `pkg-config --cflags cairomm-1.0` -MMD
 OBJECTSF=$(SOURCESF:.cpp=.o)
 DEPENDS=$(SOURCESF:.cpp=.d)
-
-LDLIBS= -lm \
-        -lopencv_core \
-        -lopencv_highgui \
-        -lopencv_imgproc \
-        -lopencv_video \
-        -lopencv_videoio \
-        -lopencv_imgcodecs \
-        -lpthread \
-        -lavformat \
-        -lavcodec \
-        -lavutil \
-        -lswscale \
-        -lnlopt \
-        -lcairo \
-        -lcairomm-1.0 \
-        -lsigc-2.0 \
-        -lrt \
-        -lflycapture \
-        -lmccusb \
-        -lhidapi-libusb \
-        -lusb-1.0 
-
-LDDIRS= -L/usr/local/lib \
-        -L/usr/lib
-
-INCDIRS=-I"./library" \
-        -I"/usr/local/include/opencv2" \
-        -I"/usr/local/include/libusb" \
-        -I"/usr/local/include/hidapi" \
-        -I"/usr/local/include/flycapture" \
-        -I"/usr/include/cairomm-1.0"
-
+LDLIBS=-lopencv_core -lopencv_highgui -lopencv_imgproc -lopencv_video -lpthread -lavformat -lavcodec -lavutil -lswscale -lnlopt -lcairo -lcairomm-1.0 -lsigc-2.0 -lrt -lflycapture
 EXECUTABLE=FicTrac
 SOURCESF=FicTrac.cpp \
     ./library/AVWriter.cpp \
@@ -56,14 +26,15 @@ SOURCESF=FicTrac.cpp \
     ./library/CmPoint.cpp \
     ./library/CVSource.cpp \
     ./library/EquiAreaCameraModel.cpp \
+    ./library/FicTcpClient.cpp \
     ./library/FisheyeCameraModel.cpp \
-    ./library/PGRSource.cpp \
     ./library/ImgSource.cpp \
     ./library/Maths.cpp \
     ./library/NLoptFunc.cpp \
     ./library/readwrite.cpp \
     ./library/RectilinearCameraModel.cpp \
     ./library/Remapper.cpp \
+    ./library/PGRSource.cpp \
     ./library/serial.cpp \
     ./library/Utils.cpp \
     ./library/VsDraw.cpp
@@ -79,11 +50,19 @@ all: $(SOURCES) $(EXECUTABLE)
 	| sed 's/\($*\)\.o[ :]*/\1.o $@ : /g' > $@; \
 	[ -s $@ ] || rm -f $@
 
+libmcchid.so: $(OBJECTSM)
+#	$(CC) -O -shared -Wall $(OBJECTSM) -o $@
+	$(CC) -shared -Wl,-soname,$@ -o $@ $(OBJECTSM) -lc -lm
+
+libmcchid.a: $(OBJECTSM)
+	ar -r libmcchid.a $(OBJECTSM)
+	ranlib libmcchid.a
+	
 $(EXECUTABLE): $(OBJECTSF)
-	$(CC2) -o $@ $(OBJECTSF) $(LDFLAGS) -I. -L. $(LDDIRS) $(LDLIBS) 
+	$(CC2) -o $@ $(OBJECTSF) $(LDFLAGS) $(LDLIBS) -g -Wall -I. -lmcchid -L. -lm -L/usr/local/lib -lhid -lusb 
 
 .cpp.o:
-	$(CC2) $(CFLAGSF) $(INCDIRS) $< -o $@
+	$(CC2) $(CFLAGSF) $< -o $@
 
 clean: ; rm -f $(DEPENDS) $(OBJECTSF) $(EXECUTABLE)
 

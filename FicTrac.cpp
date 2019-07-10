@@ -18,6 +18,7 @@ SHARED_PTR(CameraRemap);
 #include "VsDraw.h"
 #include "serial.h"
 #include "CVSource.h"
+#include "FicTcpClient.h"
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -48,7 +49,7 @@ SHARED_PTR(CameraRemap);
 #include <ctype.h>
 #include <asm/types.h>
 
-#include "hidapi.h"
+//#include "hidapi.h"
 #include "pmd.h"
 #include "usb-3100.h"
 //---------------------------------
@@ -1284,8 +1285,12 @@ int main(int argc, char *argv[])
 	BAYER_TYPE bayer_type = BAYER_NONE;
 	double sphere_orient[3] = {0,0,0};
 	bool force_draw_config = false;
-	int display_nth_frame = 1;
 	bool mcc_enabled = true;
+	unsigned int max_sphere_reset = 0;
+	string sphere_reset_contact = "";
+	bool datestamp_output_file = false;
+	string tcp_server_ip = "";
+	int tcp_server_port = 0;
 
 	enum CAM_MODEL_TYPE m_cam_model = RECTILINEAR;
 
@@ -1342,9 +1347,6 @@ int main(int argc, char *argv[])
 			} else if( tokens.front().compare("do_display") == 0 ) {
 				tokens.pop_front();
 				do_display = bool(atoi(tokens.front().c_str()));
-			} else if (tokens.front().compare("display_nth_frame") == 0) {
-				tokens.pop_front();
-				display_nth_frame = atoi(tokens.front().c_str());
 			} else if( tokens.front().compare("no_prompts") == 0 ) {
 				tokens.pop_front();
 				no_prompts = bool(atoi(tokens.front().c_str()));
@@ -1454,13 +1456,29 @@ int main(int argc, char *argv[])
 			} else if( tokens.front().compare("output_position") == 0 ) {  //else if clause added by Pablo on 07/2014
 				tokens.pop_front();
 				output_position = bool(atoi(tokens.front().c_str()));
-			} else if( tokens.front().compare("single_axis") == 0 ) {  //else if clause added by Pablo on 07/2014
+			} else if( tokens.front().compare("single_axis") == 0 ) {  //else if clause added by Hessam
 				tokens.pop_front();
 				single_axis = bool(atoi(tokens.front().c_str()));
 			} else if( tokens.front().compare("mcc_enabled") == 0 ) {
 				tokens.pop_front();
 				mcc_enabled = bool(atoi(tokens.front().c_str()));
+			} else if( tokens.front().compare("max_sphere_reset") == 0 ) {
+				tokens.pop_front();
+				max_sphere_reset = Utils::STR2NUM(tokens.front());
+			} else if( tokens.front().compare("sphere_reset_contact") == 0 ) {
+				tokens.pop_front();
+				sphere_reset_contact = tokens.front();
+			} else if( tokens.front().compare("datestamp_output_file") == 0 ) {
+				tokens.pop_front();
+                                datestamp_output_file = bool(atoi(tokens.front().c_str()));
+                        } else if( tokens.front().compare("tcp_server_ip") == 0 ) {
+				tokens.pop_front();
+				tcp_server_ip = tokens.front();
+			} else if( tokens.front().compare("tcp_server_port") == 0 ) {
+				tokens.pop_front();
+				tcp_server_port = Utils::STR2NUM(tokens.front());
 			}
+
 		}
 		// ignore the remainder of the line
 		getline(file, line);
@@ -1522,6 +1540,17 @@ int main(int argc, char *argv[])
 		m_cam_model = FISHEYE;
 	}
 
+	// add datestamp as epoch time to output file if datestamp_output_file is true (Jazz 8/16/18)
+	// avoids overwriting output files!
+    if (datestamp_output_file){
+        time_t t = time(nullptr);
+        std::stringstream stream;
+        stream <<t;
+        output_fn = output_fn.substr(0, output_fn.length()-4) + "_" + stream.str() + ".dat";
+    }
+
+
+
 	printf("\nInitialising program variables:\n");
 	printf("input_vid_fn: .  .  '%s'\n", input_vid_fn.c_str());
 	printf("output_fn: .  .  .  '%s'\n", output_fn.c_str());
@@ -1534,7 +1563,6 @@ int main(int argc, char *argv[])
 	printf("frame_skip:.  .  .  %d\n", frame_skip);
 	printf("frame_step:.  .  .  %d\n", frame_step);
 	printf("do_display:.  .  .  %d\n", do_display);
-	printf("display_nth_frame:  %d\n", display_nth_frame);
 	printf("no_prompts:.  .  .  %d\n", no_prompts);
 	printf("do_config: .  .  .  %d\n", do_config);
 	printf("save_video:.  .  .  %d\n", save_video);
@@ -1567,6 +1595,7 @@ int main(int argc, char *argv[])
 			sphere_orient[0], sphere_orient[1], sphere_orient[2]);
 	printf("bayer_type:.  .  .  %d\n", bayer_type);
 	printf("force_draw_config:  %d\n", force_draw_config);
+	printf("datestamp_output_file:  %d\n", datestamp_output_file);
 	printf("\n");
 
 	fflush(stdout);
@@ -1593,7 +1622,7 @@ int main(int argc, char *argv[])
 		cap->setFPS(fps);
 
 		// set bayer mode
-		cap->setBayerType(bayer_type);
+		//cap->setBayerType(bayer_type);
 	} else {
 		// input video
 		cap = boost::shared_ptr<CVSource>(new CVSource(input_vid_fn));
@@ -2702,21 +2731,33 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	// TCP CLIENT
+	FicTcpClient* tcpClient;
+	if(tcp_server_ip != "")
+	  {
+	    tcpClient = new FicTcpClient(tcp_server_ip.c_str(), tcp_server_port);
+	    tcpClient->StartClient();
+	  }
+
+
+
+
 	///
 	/// PROGRAM LOOP
 	///
 
 	fflush(stdout);
 
-	#if LOG_TIMING
-		double t0 = Utils::GET_CLOCK();
+#if LOG_TIMING
+	double t0 = Utils::GET_CLOCK();
 
-	hid_device*  hid;
-	hid = 0x0;
+
+	HIDInterface*  hid = 0x0;
 	if (mcc_enabled) {
-	//added for MCC USB 3101
+	__u8 channel;
+	__u16 value;
 		try {
-	int ret;
+	hid_return ret;
 	int idx;
 
 	ret=hid_init();
@@ -2748,8 +2789,9 @@ int main(int argc, char *argv[])
 
 	}
 
-	#endif // LOG_TIMING
-
+#endif // LOG_TIMING
+	unsigned int nSphereResets = 0;
+	bool mIsSphereResetEmailSent = false;
 	unsigned int nframes = 0;
     unsigned int nframes_skipped = 0;
 	double av_err = 0, av_exec_time = 0, av_loop_time = 0, total_dist = 0;
@@ -2873,18 +2915,25 @@ int main(int argc, char *argv[])
 				double ub[3] = {best_guess[0]+nlopt_res, best_guess[1]+nlopt_res, best_guess[2]+nlopt_res};
 				sphere.setLowerBounds(lb);
 				sphere.setUpperBounds(ub);
-				sphere.optimize(best_guess);
+				int optResults = sphere.optimize(best_guess);
 				sphere.getOptX(guess);
 				err = sphere.getOptF();
 
 				bad_frame = err > max_err;
+				if (optResults > 0){
+				  printf("minimised:\t%.2f %.2f %.2f  (%.3f)\n",
+					 guess[0], guess[1], guess[2], err);
+				}
+				else{
+				  printf("optimization failed with error code %i\n Error number is (%.3f)\n",
+					 optResults, err);
 
-				printf("minimised:\t%.2f %.2f %.2f  (%.3f)\n",
-						guess[0], guess[1], guess[2], err);
+				}
 			}
 		}
 		if( bad_frame ) {
-			nbad_frames++;
+		//if(true){
+		  nbad_frames++;
 
 			if( (max_bad_frames > 0) && (nbad_frames > max_bad_frames) ) {
 				// reset output data
@@ -2893,6 +2942,22 @@ int main(int argc, char *argv[])
 				SPHERE_INIT = false;
 				sphere.clearSphere();
 				first_good_frame = true;
+				nSphereResets++;
+				if( (max_sphere_reset > 0) &&
+				    (nSphereResets > max_sphere_reset) &&
+				    !mIsSphereResetEmailSent){
+				  string bodyMsg = "FicTrac has stopped working correctly. Fictrack needs to be fixed.  -Love the gnomes in the computer";
+				  string subject = "FicTrac is down";
+				  std::stringstream commandStream;
+				  commandStream << "echo \"" << bodyMsg << "\" | mailx -s \"" << subject << "\" " << sphere_reset_contact;
+				  string command = commandStream.str();
+				  //sprintf(command, "echo \"%s\" | mailx -s \"%s\" %s", bodyMsg, subject, sphere_reset_contact);
+				  printf("%s\n", command.c_str());
+				  system(command.c_str());
+				  mIsSphereResetEmailSent = true;
+
+
+				  }
 
 				// max voltage on channel 4 indicates max number of missed frames hit
 				if (mcc_enabled)
@@ -2918,6 +2983,10 @@ int main(int argc, char *argv[])
 					usbAOut_USB31XX(hid, 3, (__u16) 0, 0);
 				}
 			nbad_frames = 0;
+			if(SPHERE_INIT){
+			  mIsSphereResetEmailSent = false;
+			  nSphereResets = 0;
+			}
 			av_guess[0] = 0.90*guess[0]+0.10*av_guess[0];
 			av_guess[1] = 0.90*guess[1]+0.10*av_guess[1];
 			av_guess[2] = 0.90*guess[2]+0.10*av_guess[2];
@@ -2943,6 +3012,7 @@ int main(int argc, char *argv[])
 		static double heading = 0;
 		static double intx = 0;
 		static double inty = 0;
+		double direction;
 
 		//w - rel vec world
 		//moved and made "static" by Pablo 07/2014
@@ -3006,7 +3076,7 @@ int main(int argc, char *argv[])
 			double speed = sqrt(velx*velx+vely*vely); //FIXME: this is probably an approximation, affects integrated x/y?
 
 			// running direction
-			double direction = atan2(vely, velx);
+			direction = atan2(vely, velx);
 			if( direction < 0*Maths::D2R ) { direction += 360*Maths::D2R; }
 
 			// integrated x/y pos (optical mouse style)
@@ -3251,6 +3321,16 @@ int main(int argc, char *argv[])
 				usbAOut_USB31XX(hid, 2, (__u16) comp2, 0);
 			}
 		}
+
+		if(tcp_server_ip != "")
+		  {
+
+		    tcpClient->Send(intx, inty, heading);
+
+		  }
+
+
+
 
 		if( do_socket_out ) {
 			pthread_mutex_lock(&(_socket->mutex));
@@ -3683,10 +3763,7 @@ int main(int argc, char *argv[])
 			// if cam_input, wait time required for fps, else wait 1ms
 			key = waitKey(int(wait_time+0.5));
 		} else if( do_display ) {
-            //only update every 10 frames
-            if( cnt %display_nth_frame == 0) {
-			    key = waitKey(1);
-            }
+			key = waitKey(1);
 		}
 
 		if( key == 0x73 ) {
