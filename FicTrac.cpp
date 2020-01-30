@@ -3302,13 +3302,14 @@ int main(int argc, char *argv[])
 				comp1 = round(65536.0*heading/(2*Maths::PI));
 				comp2 = round(65536.0*inty/(2*Maths::PI));
 			} else if(single_axis) {
-				double roughAxis[3] = {-1, 0, 0}; // unitary axis in the rough direction of rotation in camera's frame of reference (at most 90 degrees off)
+				double roughAxis[3] = {1, 0, 0}; // unitary axis in the rough direction of rotation in camera's frame of reference (at most 90 degrees off)
 				int sign = (Rcv[0]*roughAxis[0] + Rcv[1]*roughAxis[1] + Rcv[2]*roughAxis[2] > 0 ? 1 : -1);
 				double absoluteRotation = sqrt(Rcv[0]*Rcv[0] + Rcv[1]*Rcv[1] + Rcv[2]*Rcv[2]) * sign;
 				//absoluteRotation -= (2*Maths::PI) * floor(absoluteRotation / (2*Maths::PI));
-				comp0 = round(65536.0*(0.5 + 0.5 * absoluteRotation/Maths::PI));
-				comp1 = round(65536.0*(0.5 + 0.5 * Rcv[1]/Maths::PI)); // not sure what to do with these other channels
+				comp1 = round(65536.0*(0.5 + 0.5 * absoluteRotation/Maths::PI));
+				comp0 = round(65536.0*(0.5 + 0.5 * Rcv[1]/Maths::PI)); // not sure what to do with these other channels
 				comp2 = round(65536.0*(0.5 + 0.5 * Rcv[2]/Maths::PI)); // not sure what to do with these other channels
+				//printf("single axis values = %.3f %.3f %3.f\n", comp0, comp1, comp2);
 			} else {
 				comp0 = Maths::CLAMP((int)round(65535.0*(velx/nlopt_res+1)/2.0), 0, 65535);
 				comp1 = Maths::CLAMP((int)round(65535.0*(w[2]/nlopt_res+1)/2.0), 0, 65535);
