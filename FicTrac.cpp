@@ -85,6 +85,9 @@ using cv::BORDER_CONSTANT;
 using cv::BORDER_REPLICATE;
 using cv::imread;
 
+int MAX_VOLTAGE_VALUE = 65535;
+int HALF_VOLTAGE_VALUE = 32767;
+
 bool SPHERE_INIT = false;
 
 bool ACTIVE = true;
@@ -1032,7 +1035,7 @@ void* grabInputFrames(void* obj)
 	return NULL;
 }
 
-bool getInputFrames(boost::shared_ptr<s_input> input, Mat& frame, Mat& remap, double& timestamp)
+bool getInputFrames(boost::shared_ptr<s_input> input, Mat& frame, Mat& remap, double& timestamp, unsigned int& nframes_skipped)
 {
 	pthread_mutex_lock(&input->mutex);
 	while( ACTIVE && input->frame_q.empty() ) {
@@ -1042,6 +1045,17 @@ bool getInputFrames(boost::shared_ptr<s_input> input, Mat& frame, Mat& remap, do
 		pthread_mutex_unlock(&input->mutex);
 		return false;
 	}
+
+    //If we have more than one element in the "new data" queue
+    //toss everything until we're on the most current data point
+    while(input->frame_q.size()>1){
+        input->frame_q.pop_front();
+        input->remap_q.pop_front();
+        input->timestamp_q.pop_front();
+
+        nframes_skipped++;
+    }
+
 	frame = input->frame_q.front();
 	remap = input->remap_q.front();
 	timestamp = input->timestamp_q.front();
@@ -1283,6 +1297,7 @@ int main(int argc, char *argv[])
 	serial _serial;
 	bool do_serial_out = false;
 	bool output_position= false;  //added by Pablo 07/2014
+	bool single_axis= false;  //added by Hessam 05/2019
 	int serial_baud = 115200;
 	string serial_port = "/dev/ttyS0";
 
@@ -1440,6 +1455,9 @@ int main(int argc, char *argv[])
 			} else if( tokens.front().compare("output_position") == 0 ) {  //else if clause added by Pablo on 07/2014
 				tokens.pop_front();
 				output_position = bool(atoi(tokens.front().c_str()));
+			} else if( tokens.front().compare("single_axis") == 0 ) {  //else if clause added by Hessam
+				tokens.pop_front();
+				single_axis = bool(atoi(tokens.front().c_str()));
 			} else if( tokens.front().compare("mcc_enabled") == 0 ) {
 				tokens.pop_front();
 				mcc_enabled = bool(atoi(tokens.front().c_str()));
@@ -2773,12 +2791,14 @@ int main(int argc, char *argv[])
 	unsigned int nSphereResets = 0;
 	bool mIsSphereResetEmailSent = false;
 	unsigned int nframes = 0;
+    unsigned int nframes_skipped = 0;
 	double av_err = 0, av_exec_time = 0, av_loop_time = 0, total_dist = 0;
 	for( unsigned int cnt = 1, seq_n = 1; ; cnt++, seq_n++ ) {
 
 		nframes++;
 
 		printf("\ndoing frame %d\n", cnt);
+        printf("nframes skipped:  %d\n", nframes_skipped);
 
 		double t1 = Utils::GET_CLOCK();
 
@@ -2788,7 +2808,7 @@ int main(int argc, char *argv[])
 		Mat frame_bgr, remap;
 		bool grab_error = false;
 		for( unsigned int i = 0; i < frame_step; i++ ) {
-			if( !getInputFrames(input, frame_bgr, remap, timestamp) ) {
+			if( !getInputFrames(input, frame_bgr, remap, timestamp, nframes_skipped) ) {
 				fprintf(stderr, "ERROR: No more frames!\n");
 				fflush(stdout);
 				grab_error = true;
@@ -2856,79 +2876,10 @@ int main(int argc, char *argv[])
 				fflush(stdout);
 				for( int i = 1; i <= nsearch_pts; i++ ) {
 					float pc = float(i)/nsearch_pts;
-					switch( search_state ) {
-						case 0:
-							if( pc >= 0.1 ) {
-								printf("10%% ");
-								fflush(stdout);
-								search_state++;
-							}
-							break;
-						case 1:
-							if( pc >= 0.2 ) {
-								printf("20%% ");
-								fflush(stdout);
-								search_state++;
-							}
-							break;
-						case 2:
-							if( pc >= 0.3 ) {
-								printf("30%% ");
-								fflush(stdout);
-								search_state++;
-							}
-							break;
-						case 3:
-							if( pc >= 0.4 ) {
-								printf("40%% ");
-								fflush(stdout);
-								search_state++;
-							}
-							break;
-						case 4:
-							if( pc >= 0.5 ) {
-								printf("50%% ");
-								fflush(stdout);
-								search_state++;
-							}
-							break;
-						case 5:
-							if( pc >= 0.6 ) {
-								printf("60%% ");
-								fflush(stdout);
-								search_state++;
-							}
-							break;
-						case 6:
-							if( pc >= 0.7 ) {
-								printf("70%% ");
-								fflush(stdout);
-								search_state++;
-							}
-							break;
-						case 7:
-							if( pc >= 0.8 ) {
-								printf("80%% ");
-								fflush(stdout);
-								search_state++;
-							}
-							break;
-						case 8:
-							if( pc >= 0.9 ) {
-								printf("90%% ");
-								fflush(stdout);
-								search_state++;
-							}
-							break;
-						case 9:
-							if( pc >= 1 ) {
-								printf("100%% ");
-								fflush(stdout);
-								search_state++;
-							}
-							break;
-						default:
-							break;
+					if(search_state < floor(pc*10)) {
+						printf("%d%% ", int(pc*100));
+						fflush(stdout);
+						search_state++;
 					}
 					fflush(stdout);
 
@@ -3006,8 +2957,30 @@ int main(int argc, char *argv[])
 
 
 				  }
+
+				// max voltage on channel 4 indicates max number of missed frames hit
+				if (mcc_enabled)
+				{
+					usbAOut_USB31XX(hid, 3, (__u16) MAX_VOLTAGE_VALUE, 0);
+				}
 			}
+			else
+			{
+				// half voltage on channel 4 indicates single missed frame
+				if (mcc_enabled)
+				{
+					usbAOut_USB31XX(hid, 3, (__u16) HALF_VOLTAGE_VALUE, 0);
+				}
+			}
+
+
+
 		} else {
+
+                        if (mcc_enabled)
+				{
+					usbAOut_USB31XX(hid, 3, (__u16) 0, 0);
+				}
 			nbad_frames = 0;
 			if(SPHERE_INIT){
 			  mIsSphereResetEmailSent = false;
@@ -3043,6 +3016,10 @@ int main(int argc, char *argv[])
 		//w - rel vec world
 		//moved and made "static" by Pablo 07/2014
 		static double w[3] = {0,0,0};
+
+		//moved and made static by Hessam 5/2019
+		static double Rcv[3] = {0,0,0};
+		static double Rv[3] = {0,0,0};
 
 		// save if good
 		if( !bad_frame || !SPHERE_INIT ) {
@@ -3080,12 +3057,12 @@ int main(int argc, char *argv[])
 			Maths::MUL_MAT(Rf, Rcam, Rc);
 
 			// Rv - abs vec cam
-			double Rcv[3] = {0,0,0};
+			// double Rcv[3] = {0,0,0}; made static by Hessam 5/2019
 			Maths::ANGLE_AXIS_FROM_MAT(Rc, Rcv);
 
 			// FIXME: hack to avoid bee pos history drawing failing
 			// (path hist on ball was failing when Rf != 1)
-			double Rv[3] = {0,0,0};
+			// double Rv[3] = {0,0,0}; made static by Hessam 5/2019
 			Maths::ANGLE_AXIS_FROM_MAT(Rcam, Rv);
 
 			// Wv - abs vec world
@@ -3317,27 +3294,31 @@ int main(int argc, char *argv[])
 				fprintf(stderr, "ERROR: Short write to serial (%s)!\n", serial_port.c_str());
 			}
 
+			int comp0, comp1, comp2;
+
 			if (output_position) {
-				int comp0 = round(65536.0*intx/(2*Maths::PI));
-				int comp1 = round(65536.0*heading/(2*Maths::PI));
-				int comp2 = round(65536.0*inty/(2*Maths::PI));
-
-                if (mcc_enabled) {
-					usbAOut_USB31XX(hid, 0, (__u16) comp0, 0);
-					usbAOut_USB31XX(hid, 2, (__u16) comp2, 0);
-					usbAOut_USB31XX(hid, 1, (__u16) comp1, 0);
-                }
+				comp0 = round(65536.0*intx/(2*Maths::PI));
+				comp1 = round(65536.0*heading/(2*Maths::PI));
+				comp2 = round(65536.0*inty/(2*Maths::PI));
+			} else if(single_axis) {
+				double roughAxis[3] = {1, 0, 0}; // unitary axis in the rough direction of rotation in camera's frame of reference (at most 90 degrees off)
+				int sign = (Rcv[0]*roughAxis[0] + Rcv[1]*roughAxis[1] + Rcv[2]*roughAxis[2] > 0 ? 1 : -1);
+				double absoluteRotation = sqrt(Rcv[0]*Rcv[0] + Rcv[1]*Rcv[1] + Rcv[2]*Rcv[2]) * sign;
+				//absoluteRotation -= (2*Maths::PI) * floor(absoluteRotation / (2*Maths::PI));
+				comp1 = round(65536.0*(0.5 + 0.5 * absoluteRotation/Maths::PI));
+				comp0 = round(65536.0*(0.5 + 0.5 * Rcv[1]/Maths::PI)); // not sure what to do with these other channels
+				comp2 = round(65536.0*(0.5 + 0.5 * Rcv[2]/Maths::PI)); // not sure what to do with these other channels
+				printf("single axis values = %.3f %.3f %3.f\n", comp0, comp1, comp2);
+			} else {
+				comp0 = Maths::CLAMP((int)round(65535.0*(velx/nlopt_res+1)/2.0), 0, 65535);
+				comp1 = Maths::CLAMP((int)round(65535.0*(w[2]/nlopt_res+1)/2.0), 0, 65535);
+				comp2 = Maths::CLAMP((int)round(65535.0*(vely/nlopt_res+1)/2.0), 0, 65535);
 			}
-			else {
-				int comp0 = Maths::CLAMP((int)round(65535.0*(velx/nlopt_res+1)/2.0), 0, 65535);
-				int comp1 = Maths::CLAMP((int)round(65535.0*(w[2]/nlopt_res+1)/2.0), 0, 65535);
-				int comp2 = Maths::CLAMP((int)round(65535.0*(vely/nlopt_res+1)/2.0), 0, 65535);
 
-                if (mcc_enabled) {
-					usbAOut_USB31XX(hid, 0, (__u16) comp0, 0);
-					usbAOut_USB31XX(hid, 1, (__u16) comp1, 0);
-					usbAOut_USB31XX(hid, 2, (__u16) comp2, 0);
-                }
+			if (mcc_enabled) {
+				usbAOut_USB31XX(hid, 0, (__u16) comp0, 0);
+				usbAOut_USB31XX(hid, 1, (__u16) comp1, 0);
+				usbAOut_USB31XX(hid, 2, (__u16) comp2, 0);
 			}
 		}
 
